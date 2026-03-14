@@ -37,7 +37,9 @@ class _ChatScreenState extends State<ChatScreen>
   bool _isListening = false;
   bool _isAssistantSpeaking = false;
   bool _isVoiceSubmitting = false;
+  bool _isRecording = false;
   String _liveTranscript = '';
+  final List<String> _recordedPrompts = [];
 
   @override
   void initState() {
@@ -226,7 +228,8 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<void> _send() async {
-    await _submitMessage(_controller.text.trim(), speakReply: false);
+    final text = _controller.text.trim();
+    _appendVisibleMessage(text, includeInRecording: _isRecording);
   }
 
   Future<void> _stopAssistantSpeech() async {
@@ -234,7 +237,11 @@ class _ChatScreenState extends State<ChatScreen>
     await _tts.stop();
   }
 
-  Future<void> _submitMessage(String text, {required bool speakReply}) async {
+  Future<void> _submitMessage(
+    String text, {
+    required bool speakReply,
+    bool addUserBubble = true,
+  }) async {
     if (text.isEmpty || _isSending) {
       _showError(text.isEmpty ? 'Message is empty' : 'Already sending...');
       return;
@@ -242,14 +249,16 @@ class _ChatScreenState extends State<ChatScreen>
 
     setState(() {
       _isSending = true;
-      _messages.add(
-        ChatMessage(
-          role: MessageRole.user,
-          senderName: 'Me',
-          text: text,
-          createdAt: DateTime.now(),
-        ),
-      );
+      if (addUserBubble) {
+        _messages.add(
+          ChatMessage(
+            role: MessageRole.user,
+            senderName: 'Me',
+            text: text,
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
       _messages.add(
         ChatMessage(
           role: MessageRole.assistant,
@@ -345,6 +354,78 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
+  void _appendVisibleMessage(String text, {required bool includeInRecording}) {
+    if (text.isEmpty) {
+      _showError('Message is empty');
+      return;
+    }
+
+    setState(() {
+      if (includeInRecording) {
+        _recordedPrompts.add(text);
+      }
+      _messages.add(
+        ChatMessage(
+          role: MessageRole.user,
+          senderName: 'Me',
+          text: text,
+          createdAt: DateTime.now(),
+        ),
+      );
+      _controller.clear();
+      _liveTranscript = '';
+    });
+
+    _scrollToBottom();
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_isSending) return;
+
+    if (_isRecording) {
+      await _finishRecording();
+      return;
+    }
+
+    if (_isAssistantSpeaking) {
+      await _stopAssistantSpeech();
+    }
+
+    setState(() {
+      _isRecording = true;
+      _recordedPrompts.clear();
+      _controller.clear();
+      _liveTranscript = '';
+    });
+  }
+
+  Future<void> _finishRecording() async {
+    final combinedPrompt = _recordedPrompts
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .join('\n');
+
+    setState(() {
+      _isRecording = false;
+    });
+
+    if (_voiceModeEnabled || _isListening) {
+      await _disableVoiceConversation();
+    }
+
+    if (combinedPrompt.isEmpty) {
+      _showError('No recorded content yet. Add something before stopping the recording.');
+      return;
+    }
+
+    _recordedPrompts.clear();
+    await _submitMessage(
+      combinedPrompt,
+      speakReply: false,
+      addUserBubble: false,
+    );
+  }
+
   Future<void> _speakAssistantReply(String text) async {
     if (text.trim().isEmpty) return;
     await _tts.stop();
@@ -352,6 +433,11 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<void> _toggleVoiceConversation() async {
+    if (!_isRecording) {
+      _showError('Start recording first, then use the mic to capture what you want to send.');
+      return;
+    }
+
     if (_voiceModeEnabled) {
       await _disableVoiceConversation();
       return;
@@ -476,7 +562,7 @@ class _ChatScreenState extends State<ChatScreen>
     });
 
     _stopVoiceBarsIfIdle();
-    await _submitMessage(text, speakReply: true);
+    _appendVisibleMessage(text, includeInRecording: _isRecording);
     _isVoiceSubmitting = false;
   }
 
@@ -626,68 +712,68 @@ class _ChatScreenState extends State<ChatScreen>
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(999),
-                  onTap: () => Navigator.of(context).maybePop(),
-                  child: const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: Icon(
-                      Icons.arrow_back,
-                      size: 20,
-                      color: Colors.black54,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: () => Navigator.of(context).maybePop(),
+                    child: const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Icon(
+                        Icons.arrow_back,
+                        size: 20,
+                        color: Colors.black54,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Chat',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: primaryColor,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'Group Chat',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: primaryColor,
+                  ),
                 ),
-                const Spacer(),
-                SizedBox(
-                  width: 80,
-                  height: 40,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(left: 0, child: _buildHeaderAvatar()),
-                      Positioned(left: 24, child: _buildHeaderAvatar()),
-                      Positioned(
-                        left: 48,
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: bgColor, width: 2),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              '+2',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: accentColor,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    width: 80,
+                    height: 40,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned(left: 0, child: _buildHeaderAvatar()),
+                        Positioned(left: 24, child: _buildHeaderAvatar()),
+                        Positioned(
+                          left: 48,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: accentColor.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: bgColor, width: 2),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                '+2',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: accentColor,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -708,12 +794,14 @@ class _ChatScreenState extends State<ChatScreen>
 
   Widget _buildBottomInput(bool showVoiceBars) {
     final statusText = _isListening
-        ? 'Listening... speak to the AI'
+        ? 'Listening... capturing your notes'
         : _isAssistantSpeaking
         ? 'AI is speaking...'
+        : _isRecording
+        ? 'Recording is on. Everything you send will be bundled for the AI.'
         : _voiceModeEnabled
         ? 'Voice mode is on. Tap mic to end.'
-        : 'Tap the mic to start a voice chat';
+        : 'Tap Record to start collecting content for the AI';
 
     return SafeArea(
       top: false,
@@ -740,6 +828,61 @@ class _ChatScreenState extends State<ChatScreen>
                       ),
                     )
                   : const SizedBox.shrink(),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: _toggleRecording,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _isRecording ? accentColor : const Color(0xFFF5F2EB),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: _isRecording
+                            ? accentColor.withOpacity(0.2)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isRecording ? Icons.fiber_manual_record : Icons.radio_button_unchecked,
+                          size: 16,
+                          color: _isRecording ? primaryColor : const Color(0xFF6B7280),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isRecording
+                              ? 'Stop recording${_recordedPrompts.isNotEmpty ? ' (${_recordedPrompts.length})' : ''}'
+                              : 'Record',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: _isRecording
+                                ? primaryColor
+                                : const Color(0xFF475569),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
             Container(
               decoration: BoxDecoration(
@@ -777,7 +920,9 @@ class _ChatScreenState extends State<ChatScreen>
                       decoration: InputDecoration(
                         hintText: _isListening
                             ? 'Listening to your voice...'
-                            : 'Message your family...',
+                            : _isRecording
+                            ? 'Send notes to this recording...'
+                            : 'Tap Record, then add what you want AI to analyze...',
                         hintStyle: const TextStyle(
                           color: Color(0xFF6B7280),
                           fontSize: 14,
