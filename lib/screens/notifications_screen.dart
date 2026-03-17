@@ -18,46 +18,45 @@ class NotificationsScreen extends StatelessWidget {
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return PreferredSize(
       preferredSize: const Size.fromHeight(80),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+      child: Material(
+        color: const Color(0xFFFDFBF7).withOpacity(0.8),
+        child: SafeArea(
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFFDFBF7).withOpacity(0.8),
               border: Border(
                 bottom: BorderSide(color: Colors.black.withOpacity(0.04)),
               ),
             ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Icon(
-                        Icons.arrow_back,
-                        size: 24,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Text(
-                      'Notifications',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () {},
-                      child: const Icon(
-                        Icons.settings,
-                        size: 24,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    size: 24,
+                    color: Colors.black87,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Notifications',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Settings clicked')),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.settings,
+                    size: 24,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -97,7 +96,11 @@ class NotificationsScreen extends StatelessWidget {
       title: 'New member request',
       subtitle: 'John Doe wants to join the family calendar',
       action: TextButton(
-        onPressed: () {},
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Accept clicked')),
+          );
+        },
         child: const Text('Accept'),
       ),
     );
@@ -111,7 +114,11 @@ class NotificationsScreen extends StatelessWidget {
       title: 'Scheduled: Sunday Roast',
       subtitle: 'Your family event is set for tomorrow at 6:00 PM',
       action: TextButton(
-        onPressed: () {},
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('View clicked')),
+          );
+        },
         child: const Text('View'),
       ),
     );
@@ -125,9 +132,13 @@ class NotificationsScreen extends StatelessWidget {
       title: 'Event changed',
       subtitle: 'Sunday Roast moved to 7:00 PM',
       action: TextButton(
-        onPressed: () {},
-        child: const Text('View'),
-      ),
+        onPressed: () {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('View clicked')),
+      );
+    },
+    child: const Text('View'),
+    ),
     );
   }
 
@@ -139,7 +150,11 @@ class NotificationsScreen extends StatelessWidget {
       title: 'Task completed',
       subtitle: 'Dad finished grocery shopping',
       action: TextButton(
-        onPressed: () {},
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Got it clicked')),
+          );
+        },
         child: const Text('Got it'),
       ),
     );

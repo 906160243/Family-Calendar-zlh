@@ -194,7 +194,44 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final now = DateTime.now();
     selectedDate = DateTime(now.year, now.month, now.day);
   }
-
+///----------------------------mock
+  List<CalendarEvent> _mockEventsForSelectedDate() {
+    return [
+      CalendarEvent(
+        id: 'mock_1',
+        eventName: 'English Class',
+        eventTag: 'education',
+        eventDate: DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+        ),
+        eventTime: '8:00 AM - 9:30 AM',
+        userId: currentUserId,
+        familyId: currentFamilyId,
+        notes: 'Bring workbook and pencil case.',
+        participants: ['Mom', 'Emma'],
+        reminderEnabled: true,
+      ),
+      CalendarEvent(
+        id: 'mock_2',
+        eventName: 'Grocery Run',
+        eventTag: 'family',
+        eventDate: DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+        ),
+        eventTime: '10:30 AM - 11:30 AM',
+        userId: currentUserId,
+        familyId: currentFamilyId,
+        notes: 'Buy fruit, milk and bread.',
+        participants: ['Dad', 'Lucas'],
+        reminderEnabled: true,
+      ),
+    ];
+  }
+  ///---------------------------
   List<DateTime> get weekDays {
     final monday = selectedDate.subtract(Duration(days: selectedDate.weekday - 1));
     return List.generate(6, (index) => monday.add(Duration(days: index)));
@@ -206,12 +243,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
         .where('familyId', isEqualTo: currentFamilyId)
         .snapshots()
         .map((snapshot) {
-      final events = snapshot.docs
+      final firestoreEvents = snapshot.docs
           .map((doc) => CalendarEvent.fromFirestore(doc))
           .where((event) {
         final sameDay = _isSameDate(event.eventDate, selectedDate);
         return sameDay && event.userId == currentUserId;
       }).toList();
+
+      final events =
+      firestoreEvents.isEmpty ? _mockEventsForSelectedDate() : firestoreEvents;
 
       events.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
       return events;
@@ -413,7 +453,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         if (snapshot.hasError) {
           return Center(
             child: Text(
-              '读取事件失败：${snapshot.error}',
+              'Fail to read the event：${snapshot.error}',
               style: const TextStyle(
                 color: Colors.red,
                 fontSize: 14,
@@ -428,7 +468,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         if (events.isEmpty) {
           return const Center(
             child: Text(
-              '当天没有事件',
+              'No events today',
               style: TextStyle(
                 color: Color(0xFF94A3B8),
                 fontSize: 16,
