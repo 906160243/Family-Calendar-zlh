@@ -1,10 +1,10 @@
 import 'package:calendar/screens/memo_screen.dart';
 import 'package:calendar/screens/select_family_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'calendar_screen.dart';
-import 'family_screen.dart';
-import 'chat_list_screen.dart';
 import 'login_screen.dart';
+import 'voice_memo_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -209,6 +209,7 @@ class SettingsScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
       child: GestureDetector(
         onTap: () {
+          FirebaseAuth.instance.signOut();
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
