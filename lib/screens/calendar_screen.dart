@@ -48,8 +48,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final weekStart = DateTime(now.year, now.month, now.day).subtract(
       Duration(days: now.weekday - 1),
     );
-    _days = List.generate(6, (index) => weekStart.add(Duration(days: index)));
-    _selectedDayIndex = math.max(0, math.min(5, now.weekday - 1));
+    _days = List.generate(7, (index) => weekStart.add(Duration(days: index)));
+    _selectedDayIndex = math.max(0, math.min(6, now.weekday - 1));
   }
 
   DateTime get _selectedDate => _days[_selectedDayIndex];
