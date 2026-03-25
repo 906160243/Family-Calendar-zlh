@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'chat_screen.dart';
@@ -21,16 +22,24 @@ class _FamilyScreenState extends State<FamilyScreen> {
   static const bgColor = Color(0xFFFDFAF2);
   static const primaryColor = Color(0xFF5C4D33);
   static const accentColor = Color(0xFFE2B736);
+  static const dangerColor = Color(0xFFD64545);
 
   late Future<List<Map<String, dynamic>>> _membersFuture;
 
   final TextEditingController _inviteEmailController = TextEditingController();
+
   bool _isInviting = false;
+  bool _isProcessingAction = false;
+
+  String? _currentUid;
+  String _currentRole = 'member';
 
   @override
   void initState() {
     super.initState();
+    _currentUid = FirebaseAuth.instance.currentUser?.uid;
     _membersFuture = _loadFamilyMembers();
+    _loadCurrentUserRole();
   }
 
   @override
@@ -40,6 +49,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
   }
 
   Future<void> _refreshMembers() async {
+    await _loadCurrentUserRole();
     final future = _loadFamilyMembers();
     setState(() {
       _membersFuture = future;
@@ -47,16 +57,36 @@ class _FamilyScreenState extends State<FamilyScreen> {
     await future;
   }
 
+  Future<void> _loadCurrentUserRole() async {
+    if (_currentUid == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('families')
+        .doc(widget.familyId)
+        .collection('members')
+        .doc(_currentUid)
+        .get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data() ?? {};
+    final role = (data['role'] ?? 'member').toString().trim();
+
+    if (mounted) {
+      setState(() {
+        _currentRole = role.isEmpty ? 'member' : role;
+      });
+    }
+  }
+
   Future<Map<String, dynamic>?> _findUserByUid(String userId) async {
     final firestore = FirebaseFirestore.instance;
 
-    // 方案1：users 文档 id 就是 uid
     final directDoc = await firestore.collection('users').doc(userId).get();
     if (directDoc.exists) {
       return directDoc.data();
     }
 
-    // 方案2：users 文档里有 uid 字段
     final query = await firestore
         .collection('users')
         .where('uid', isEqualTo: userId)
@@ -119,7 +149,6 @@ class _FamilyScreenState extends State<FamilyScreen> {
       (familyData['familyName'] ?? widget.familyName).toString();
       final familyPhotoURL = (familyData['photoURL'] ?? '').toString();
 
-      // 1. 根据邮箱查找用户
       final invitedUserDoc = await _findUserDocByEmail(inputEmail);
 
       if (invitedUserDoc == null) {
@@ -129,15 +158,13 @@ class _FamilyScreenState extends State<FamilyScreen> {
       final invitedUid = invitedUserDoc.id;
       final invitedUserData = invitedUserDoc.data();
 
-      final nickname = (
-          invitedUserData['fullName'] ??
-              invitedUserData['name'] ??
-              invitedUserData['displayName'] ??
-              invitedUserData['nickname'] ??
-              inputEmail
-      ).toString();
+      final nickname = (invitedUserData['fullName'] ??
+          invitedUserData['name'] ??
+          invitedUserData['displayName'] ??
+          invitedUserData['nickname'] ??
+          inputEmail)
+          .toString();
 
-      // 2. 检查该用户是否已经在家庭成员中
       final existingMemberDoc =
       await familyRef.collection('members').doc(invitedUid).get();
 
@@ -145,7 +172,6 @@ class _FamilyScreenState extends State<FamilyScreen> {
         throw Exception('This user is already in the family');
       }
 
-      // 3. 检查该用户的 families 子集合中是否已存在该家庭
       final userFamilyRef = firestore
           .collection('users')
           .doc(invitedUid)
@@ -160,7 +186,6 @@ class _FamilyScreenState extends State<FamilyScreen> {
       final now = Timestamp.now();
       final batch = firestore.batch();
 
-      // 4. 写入 users/{uid}/families/{familyId}
       batch.set(userFamilyRef, {
         'familyId': widget.familyId,
         'familyName': familyName,
@@ -169,7 +194,6 @@ class _FamilyScreenState extends State<FamilyScreen> {
         'role': 'member',
       });
 
-      // 5. 写入 families/{familyId}/members/{uid}
       batch.set(
         familyRef.collection('members').doc(invitedUid),
         {
@@ -209,6 +233,248 @@ class _FamilyScreenState extends State<FamilyScreen> {
     }
   }
 
+  Future<void> _disbandFamily() async {
+    if (_isProcessingAction) return;
+
+    final confirmed = await _showConfirmDialog(
+      title: 'Disband family?',
+      message: 'This will remove the family for all members.',
+      confirmText: 'Disband',
+      confirmColor: dangerColor,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setState(() {
+        _isProcessingAction = true;
+      });
+
+      final firestore = FirebaseFirestore.instance;
+      final familyRef = firestore.collection('families').doc(widget.familyId);
+      final membersSnapshot = await familyRef.collection('members').get();
+      final batch = firestore.batch();
+
+      for (final memberDoc in membersSnapshot.docs) {
+        final memberUid = memberDoc.id;
+
+        batch.delete(
+          firestore
+              .collection('users')
+              .doc(memberUid)
+              .collection('families')
+              .doc(widget.familyId),
+        );
+
+        batch.delete(memberDoc.reference);
+      }
+
+      batch.delete(familyRef);
+
+      await batch.commit();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Family disbanded successfully')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingAction = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _removeMember(String targetUid, String targetName) async {
+    if (_isProcessingAction) return;
+
+    final confirmed = await _showConfirmDialog(
+      title: 'Remove member?',
+      message: 'Remove $targetName from this family?',
+      confirmText: 'Remove',
+      confirmColor: dangerColor,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setState(() {
+        _isProcessingAction = true;
+      });
+
+      final firestore = FirebaseFirestore.instance;
+      final batch = firestore.batch();
+
+      batch.delete(
+        firestore
+            .collection('families')
+            .doc(widget.familyId)
+            .collection('members')
+            .doc(targetUid),
+      );
+
+      batch.delete(
+        firestore
+            .collection('users')
+            .doc(targetUid)
+            .collection('families')
+            .doc(widget.familyId),
+      );
+
+      await batch.commit();
+      await _refreshMembers();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$targetName removed successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingAction = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _leaveFamily() async {
+    if (_isProcessingAction) return;
+
+    final uid = _currentUid;
+    if (uid == null) return;
+
+    final confirmed = await _showConfirmDialog(
+      title: 'Leave family?',
+      message: 'You will leave this family.',
+      confirmText: 'Leave',
+      confirmColor: dangerColor,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setState(() {
+        _isProcessingAction = true;
+      });
+
+      final firestore = FirebaseFirestore.instance;
+      final batch = firestore.batch();
+
+      batch.delete(
+        firestore
+            .collection('families')
+            .doc(widget.familyId)
+            .collection('members')
+            .doc(uid),
+      );
+
+      batch.delete(
+        firestore
+            .collection('users')
+            .doc(uid)
+            .collection('families')
+            .doc(widget.familyId),
+      );
+
+      await batch.commit();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You left the family')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingAction = false;
+        });
+      }
+    }
+  }
+
+  Future<bool> _showConfirmDialog({
+    required String title,
+    required String message,
+    required String confirmText,
+    required Color confirmColor,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: primaryColor,
+            ),
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(
+              color: Colors.black87,
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.black54),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(
+                confirmText,
+                style: TextStyle(
+                  color: confirmColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
   Future<List<Map<String, dynamic>>> _loadFamilyMembers() async {
     final firestore = FirebaseFirestore.instance;
 
@@ -236,26 +502,25 @@ class _FamilyScreenState extends State<FamilyScreen> {
 
       final String role = (memberData['role'] ?? 'member').toString().trim();
 
-      final String fullName = (
-          userData?['fullName'] ??
-              userData?['name'] ??
-              userData?['displayName'] ??
-              memberData['nickname'] ??
-              memberData['fullName'] ??
-              memberData['name'] ??
-              memberData['displayName'] ??
-              'Unknown Member'
-      ).toString();
+      final String fullName = (userData?['fullName'] ??
+          userData?['name'] ??
+          userData?['displayName'] ??
+          memberData['nickname'] ??
+          memberData['fullName'] ??
+          memberData['name'] ??
+          memberData['displayName'] ??
+          'Unknown Member')
+          .toString();
 
-      final String photoURL = (
-          userData?['photoURL'] ??
-              userData?['photoUrl'] ??
-              userData?['avatar'] ??
-              memberData['photoURL'] ??
-              memberData['photoUrl'] ??
-              memberData['avatar'] ??
-              ''
-      ).toString().trim();
+      final String photoURL = (userData?['photoURL'] ??
+          userData?['photoUrl'] ??
+          userData?['avatar'] ??
+          memberData['photoURL'] ??
+          memberData['photoUrl'] ??
+          memberData['avatar'] ??
+          '')
+          .toString()
+          .trim();
 
       members.add({
         'userId': userId,
@@ -764,27 +1029,90 @@ class _FamilyScreenState extends State<FamilyScreen> {
               ],
             ),
           ),
-          if (member['badge'] != null)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 4,
-              ),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                member['badge'].toString().toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: accentColor,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
+          _buildMemberActionWidget(member),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMemberActionWidget(Map<String, dynamic> member) {
+    final String memberUid = (member['userId'] ?? '').toString().trim();
+    final String memberName = (member['name'] ?? 'Member').toString();
+    final bool isMe = memberUid == _currentUid;
+    final bool isOwner = _currentRole.toLowerCase() == 'owner';
+
+    if (isOwner && isMe) {
+      return _buildActionButton(
+        text: 'Disband',
+        onTap: _isProcessingAction ? null : _disbandFamily,
+      );
+    }
+
+    if (isOwner && !isMe) {
+      return _buildActionButton(
+        text: 'Remove',
+        onTap: _isProcessingAction
+            ? null
+            : () => _removeMember(memberUid, memberName),
+      );
+    }
+
+    if (!isOwner && isMe) {
+      return _buildActionButton(
+        text: 'Leave',
+        onTap: _isProcessingAction ? null : _leaveFamily,
+      );
+    }
+
+    if (member['badge'] != null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: accentColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          member['badge'].toString().toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: accentColor,
+            letterSpacing: 1,
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildActionButton({
+    required String text,
+    required VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: accentColor.withOpacity(onTap == null ? 0.05 : 0.12),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          text.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: onTap == null ? primaryColor.withOpacity(0.35) : accentColor,
+            letterSpacing: 1,
+          ),
+        ),
       ),
     );
   }
