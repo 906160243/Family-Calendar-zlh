@@ -30,7 +30,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const accentColor = AppTheme.accent;
   static const secondaryAccent = AppTheme.secondaryAccent;
 
-  static const _hourRowHeight = 92.0;
+  static const _hourRowHeight = 50.0;
   static const _leftTimeWidth = 60.0;
   static const _timelineGap = 16.0;
   static const _eventCardHeight = 168.0;
@@ -349,47 +349,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
             .toList()
           ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
-        if (selectedEvents.isEmpty) {
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  _emptyState(),
-                  const SizedBox(height: 140),
-                ],
-              ),
-            ),
-          );
-        }
-
         return FutureBuilder<Map<String, String>>(
           future: _loadParticipantNames(selectedEvents),
           builder: (context, namesSnapshot) {
             final participantNames = namesSnapshot.data ?? <String, String>{};
+//----------------------------------------------------
+            final int startHour;
+            final int endHour;
 
-            final minHour = math.max(
-              0,
-              math.min(
-                23,
-                selectedEvents.map((e) => e.startTime.hour).reduce(math.min) - 1,
-              ),
-            );
+            if (selectedEvents.isEmpty) {
+              startHour = 0;
+              endHour = 24;
+            } else {
+              final minHour = math.max(
+                0,
+                math.min(
+                  23,
+                  selectedEvents.map((e) => e.startTime.hour).reduce(math.min) - 1,
+                ),
+              );
 
-            final maxHour = math.max(
-              minHour + 1,
-              math.min(
-                23,
-                selectedEvents
-                    .map((e) => e.endTime.hour + (e.endTime.minute > 0 ? 1 : 0))
-                    .reduce(math.max),
-              ),
-            );
+              final maxHour = math.max(
+                minHour + 1,
+                math.min(
+                  23,
+                  selectedEvents
+                      .map((e) => e.endTime.hour + (e.endTime.minute > 0 ? 1 : 0))
+                      .reduce(math.max),
+                ),
+              );
 
-            final startHour = math.min(8, minHour);
-            final endHour = math.max(11, maxHour);
-
+              startHour = math.min(8, minHour);
+              endHour = math.max(11, maxHour);
+            }
+//------------------------------------------------------------
             final flowItems = _buildFlowItems(
               context,
               selectedEvents,
