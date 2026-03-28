@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+
 import '../assets/figma_assets.dart';
 import 'family_selection_screen.dart';
+import 'select_members_screen.dart';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({
@@ -40,11 +42,15 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   bool _reminderEnabled = true;
   bool _isSaving = false;
+  bool _isLoadingDefaultParticipants = true;
   int _selectedCategoryIndex = 0;
-  List<String> _selectedMembers = [];
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+
+  String? _selectedFamilyId;
+  String? _selectedFamilyName;
+  List<SelectedTaskMember> _selectedParticipants = [];
 
   static const _categories = [
     {'label': 'Education', 'color': Color(0xFF3B82F6)},
@@ -72,6 +78,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     if (matchedIndex >= 0) {
       _selectedCategoryIndex = matchedIndex;
     }
+
+    _loadDefaultParticipant();
   }
 
   @override
@@ -79,6 +87,68 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     _titleController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<Map<String, dynamic>?> _findUserByUid(String uid) async {
+    final firestore = FirebaseFirestore.instance;
+
+    final directDoc = await firestore.collection('users').doc(uid).get();
+    if (directDoc.exists) {
+      return directDoc.data();
+    }
+
+    final query = await firestore
+        .collection('users')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      return query.docs.first.data();
+    }
+
+    return null;
+  }
+
+  Future<void> _loadDefaultParticipant() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingDefaultParticipants = false;
+      });
+      return;
+    }
+
+    final userData = await _findUserByUid(user.uid);
+    final name = (userData?['fullName'] ??
+        userData?['name'] ??
+        userData?['displayName'] ??
+        user.email ??
+        'Me')
+        .toString()
+        .trim();
+    final avatarUrl = (userData?['photoURL'] ??
+        userData?['photoUrl'] ??
+        userData?['avatar'] ??
+        '')
+        .toString()
+        .trim();
+
+    final familyId = await _loadCurrentFamilyId(user.uid);
+
+    if (!mounted) return;
+    setState(() {
+      _selectedFamilyId = familyId;
+      _selectedParticipants = [
+        SelectedTaskMember(
+          id: user.uid,
+          name: name.isEmpty ? 'Me' : name,
+          avatarUrl: avatarUrl,
+        ),
+      ];
+      _isLoadingDefaultParticipants = false;
+    });
   }
 
   Future<void> _pickDate() async {
@@ -160,8 +230,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   String _selectedEventType() {
-    return (_categories[_selectedCategoryIndex]['label'] as String)
-        .toLowerCase();
+    return (_categories[_selectedCategoryIndex]['label'] as String).toLowerCase();
   }
 
   Future<String?> _loadCurrentFamilyId(String uid) async {
@@ -208,30 +277,30 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return null;
   }
 
-  Future<List<String>> _loadParticipantIds(String currentUid) async {
+  Future<void> _openFamilySelection() async {
+    final result = await Navigator.of(context).push<FamilySelectionResult>(
+      MaterialPageRoute(
+        builder: (_) => FamilySelectionScreen(
+          initialSelectedIds: _selectedParticipants.map((e) => e.id).toList(),
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    setState(() {
+      _selectedFamilyId = result.familyId;
+      _selectedFamilyName = result.familyName;
+      _selectedParticipants = result.members;
+    });
+  }
+
+  List<String> _buildParticipantIds(String currentUid) {
     final ids = <String>{currentUid};
 
-    if (_selectedMembers.isEmpty) {
-      return ids.toList();
-    }
-
-    final snapshot = await FirebaseFirestore.instance.collection('users').get();
-
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final fullName = (data['fullName'] ?? '').toString().trim();
-      final username = (data['username'] ?? '').toString().trim();
-      final email = (data['email'] ?? '').toString().trim();
-
-      final matched = _selectedMembers.any(
-            (name) =>
-        name.toLowerCase() == fullName.toLowerCase() ||
-            name.toLowerCase() == username.toLowerCase() ||
-            name.toLowerCase() == email.toLowerCase(),
-      );
-
-      if (matched) {
-        ids.add(doc.id);
+    for (final member in _selectedParticipants) {
+      if (member.id.trim().isNotEmpty) {
+        ids.add(member.id.trim());
       }
     }
 
@@ -267,8 +336,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     });
 
     try {
-      final familyId = await _loadCurrentFamilyId(user.uid) ?? user.uid;
-      final participantIds = await _loadParticipantIds(user.uid);
+      final familyId = _selectedFamilyId ?? await _loadCurrentFamilyId(user.uid) ?? user.uid;
+      final participantIds = _buildParticipantIds(user.uid);
       final startTime = _buildStartDateTime();
       final endTime = startTime.add(const Duration(hours: 1));
       final now = Timestamp.now();
@@ -305,9 +374,39 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildParticipantAvatar(SelectedTaskMember member) {
+    final hasImage = member.avatarUrl.trim().isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: CircleAvatar(
+        radius: 22,
+        backgroundColor: const Color(0xFFDCE1E8),
+        backgroundImage: hasImage ? NetworkImage(member.avatarUrl) : null,
+        child: hasImage
+            ? null
+            : Text(
+          _memberInitials(member.name),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _memberInitials(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '?';
+    return parts.take(2).map((e) => e[0]).join().toUpperCase();
   }
 
   @override
@@ -560,7 +659,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               if (value.length == 120) {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Maximum character limit reached')),
+                  const SnackBar(
+                    content: Text('Maximum character limit reached'),
+                  ),
                 );
               }
             },
@@ -584,8 +685,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   Widget _buildParticipantsSection() {
-    final user = FirebaseAuth.instance.currentUser;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -601,13 +700,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const FamilySelectionScreen(),
-                  ),
-                );
-              },
+              onPressed: _openFamilySelection,
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(50, 32),
@@ -625,48 +718,22 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            if (user != null)
-              StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(user.uid)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  String photoUrl = '';
-
-                  if (snapshot.hasData && snapshot.data!.exists) {
-                    final data = snapshot.data!.data();
-                    photoUrl = (data?['photoURL'] ?? '').toString().trim();
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: _buildCurrentUserAvatar(photoUrl),
-                  );
-                },
+        if (_isLoadingDefaultParticipants)
+          const SizedBox(
+            height: 44,
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: _accentColor,
               ),
-          ],
-        ),
+            ),
+          )
+        else
+          Wrap(
+            children:
+            _selectedParticipants.map(_buildParticipantAvatar).toList(),
+          ),
       ],
-    );
-  }
-
-  Widget _buildCurrentUserAvatar(String photoUrl) {
-    final hasImage = photoUrl.isNotEmpty;
-
-    return CircleAvatar(
-      radius: 22,
-      backgroundColor: const Color(0xFFDCE1E8),
-      backgroundImage: hasImage ? NetworkImage(photoUrl) : null,
-      child: hasImage
-          ? null
-          : const Icon(
-        Icons.person,
-        size: 22,
-        color: Colors.white,
-      ),
     );
   }
 
@@ -738,44 +805,30 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return SizedBox(
       width: double.infinity,
       height: 56,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFDBA3C), Color(0xFFFFA800)],
+      child: ElevatedButton(
+        onPressed: _isSaving ? null : _saveTask,
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: _accentColor,
+          foregroundColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFEA9E22).withOpacity(0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: _isSaving ? null : _saveTask,
-            child: Center(
-              child: _isSaving
-                  ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-                  : const Text(
-                'Save Task',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ),
+        child: _isSaving
+            ? const SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: Colors.black,
+          ),
+        )
+            : const Text(
+          'Add Task',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),

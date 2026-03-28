@@ -4,18 +4,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'family_screen.dart';
+import 'select_members_screen.dart';
 
 // Remote avatars (expires after ~7 days from Figma export)
-const _avatar1 = 'https://www.figma.com/api/mcp/asset/a38506d9-8e64-45b1-93ab-b1e18f83e69e';
-const _avatar2 = 'https://www.figma.com/api/mcp/asset/51ff2ec7-813c-4944-a4c3-916cf4aaaddc';
-const _avatar3 = 'https://www.figma.com/api/mcp/asset/f8b63427-429a-4a69-bd63-b25f74fe06db';
-const _avatar4 = 'https://www.figma.com/api/mcp/asset/0382f5d1-6d7c-4319-8d9d-087939698fc4';
-const _avatar5 = 'https://www.figma.com/api/mcp/asset/3320c70a-e5bf-4888-bc8f-13c8b5ce741b';
-const _avatar6 = 'https://www.figma.com/api/mcp/asset/ab68295f-48c2-43d1-a4af-c12be1ae41a2';
-const _avatar7 = 'https://www.figma.com/api/mcp/asset/deaeb81f-2d2e-46ad-ac6c-361c966cd6b2';
-const _avatar8 = 'https://www.figma.com/api/mcp/asset/73f6d153-7dc0-4b39-875e-459bb8f3d981';
-const _avatar9 = 'https://www.figma.com/api/mcp/asset/d245a2c3-c270-40af-92fa-7c4ae5594204';
+const _avatar1 =
+    'https://www.figma.com/api/mcp/asset/a38506d9-8e64-45b1-93ab-b1e18f83e69e';
+const _avatar2 =
+    'https://www.figma.com/api/mcp/asset/51ff2ec7-813c-4944-a4c3-916cf4aaaddc';
+const _avatar3 =
+    'https://www.figma.com/api/mcp/asset/f8b63427-429a-4a69-bd63-b25f74fe06db';
+const _avatar4 =
+    'https://www.figma.com/api/mcp/asset/0382f5d1-6d7c-4319-8d9d-087939698fc4';
+const _avatar5 =
+    'https://www.figma.com/api/mcp/asset/3320c70a-e5bf-4888-bc8f-13c8b5ce741b';
+const _avatar6 =
+    'https://www.figma.com/api/mcp/asset/ab68295f-48c2-43d1-a4af-c12be1ae41a2';
+const _avatar7 =
+    'https://www.figma.com/api/mcp/asset/deaeb81f-2d2e-46ad-ac6c-361c966cd6b2';
+const _avatar8 =
+    'https://www.figma.com/api/mcp/asset/73f6d153-7dc0-4b39-875e-459bb8f3d981';
+const _avatar9 =
+    'https://www.figma.com/api/mcp/asset/d245a2c3-c270-40af-92fa-7c4ae5594204';
 
 // Color constants
 const _background = Color(0xFFFCFBF8);
@@ -24,8 +33,25 @@ const _accent = Color(0xFFFAC638);
 const _border = Color.fromRGBO(255, 255, 255, 0.2);
 const _buttonBg = Color(0xFFF3EEE0);
 
+class FamilySelectionResult {
+  const FamilySelectionResult({
+    required this.familyId,
+    required this.familyName,
+    required this.members,
+  });
+
+  final String familyId;
+  final String familyName;
+  final List<SelectedTaskMember> members;
+}
+
 class FamilySelectionScreen extends StatefulWidget {
-  const FamilySelectionScreen({Key? key}) : super(key: key);
+  const FamilySelectionScreen({
+    Key? key,
+    this.initialSelectedIds = const [],
+  }) : super(key: key);
+
+  final List<String> initialSelectedIds;
 
   @override
   State<FamilySelectionScreen> createState() => _FamilySelectionScreenState();
@@ -55,7 +81,8 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
     final userDoc = await firestore.collection('users').doc(memberId).get();
     if (userDoc.exists) {
       final userData = userDoc.data() ?? {};
-      final photoURL = (userData['photoURL'] ?? userData['avatar'] ?? '').toString().trim();
+      final photoURL =
+      (userData['photoURL'] ?? userData['avatar'] ?? '').toString().trim();
       if (photoURL.isNotEmpty) {
         return photoURL;
       }
@@ -69,13 +96,90 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
         .get();
 
     if (familyMemberDoc.exists) {
-      final String photoURL = (familyMemberDoc.data()?['photoURL'] ?? '').toString().trim();
+      final String photoURL =
+      (familyMemberDoc.data()?['photoURL'] ?? '').toString().trim();
       if (photoURL.isNotEmpty) {
         return photoURL;
       }
     }
 
     return null;
+  }
+
+  Future<Map<String, dynamic>?> _findUserByUid(String userId) async {
+    final firestore = FirebaseFirestore.instance;
+
+    final directDoc = await firestore.collection('users').doc(userId).get();
+    if (directDoc.exists) {
+      return directDoc.data();
+    }
+
+    final query = await firestore
+        .collection('users')
+        .where('uid', isEqualTo: userId)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      return query.docs.first.data();
+    }
+
+    return null;
+  }
+
+  Future<List<SelectedTaskMember>> _loadAllFamilyMembers(String familyId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('families')
+        .doc(familyId)
+        .collection('members')
+        .get();
+
+    final List<SelectedTaskMember> members = [];
+
+    for (final doc in snapshot.docs) {
+      final memberData = doc.data();
+      final userId =
+      (memberData['uid'] ?? memberData['userId'] ?? doc.id).toString().trim();
+
+      if (userId.isEmpty) continue;
+
+      final userData = await _findUserByUid(userId);
+      final name =
+      (userData?['fullName'] ??
+          userData?['name'] ??
+          userData?['displayName'] ??
+          memberData['nickname'] ??
+          memberData['fullName'] ??
+          memberData['name'] ??
+          'Unknown Member')
+          .toString()
+          .trim();
+
+      final avatarUrl =
+      (userData?['photoURL'] ??
+          userData?['photoUrl'] ??
+          userData?['avatar'] ??
+          memberData['photoURL'] ??
+          memberData['photoUrl'] ??
+          memberData['avatar'] ??
+          '')
+          .toString()
+          .trim();
+
+      members.add(
+        SelectedTaskMember(
+          id: userId,
+          name: name.isEmpty ? 'Unknown Member' : name,
+          avatarUrl: avatarUrl,
+        ),
+      );
+    }
+
+    final unique = <String, SelectedTaskMember>{};
+    for (final member in members) {
+      unique[member.id] = member;
+    }
+    return unique.values.toList();
   }
 
   Future<List<_FamilyGroup>> _loadFamilies() async {
@@ -104,14 +208,13 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
       final membershipData = membershipSnapshot.docs[i].data();
 
       final String familyId =
-          (membershipData['familyId'] ?? '').toString().trim();
+      (membershipData['familyId'] ?? '').toString().trim();
 
       if (familyId.isEmpty) {
         continue;
       }
 
-      final familyDoc =
-          await firestore.collection('families').doc(familyId).get();
+      final familyDoc = await firestore.collection('families').doc(familyId).get();
 
       if (!familyDoc.exists) {
         continue;
@@ -130,7 +233,8 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
       for (int j = 0; j < membersSnapshot.docs.length; j++) {
         final memberDoc = membersSnapshot.docs[j];
 
-        String? photoUrl = (memberDoc.data()['photoURL'] ?? '').toString().trim();
+        String? photoUrl =
+        (memberDoc.data()['photoURL'] ?? '').toString().trim();
 
         if (photoUrl.isEmpty) {
           final loadedAvatar = await _loadMemberAvatar(memberDoc.id);
@@ -140,7 +244,7 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
         if (photoUrl.isNotEmpty) {
           avatars.add(photoUrl);
         } else {
-          avatars.add(_avatar1);
+          avatars.add(_fallbackAvatarByIndex(j));
         }
 
         if (avatars.length == 3) {
@@ -159,8 +263,8 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
         _FamilyGroup(
           id: familyId,
           name: (familyData['familyName'] ??
-                  membershipData['familyName'] ??
-                  'Unnamed Family')
+              membershipData['familyName'] ??
+              'Unnamed Family')
               .toString(),
           memberCount: memberCount,
           avatars: avatars,
@@ -170,6 +274,76 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
     }
 
     return result;
+  }
+
+  String _fallbackAvatarByIndex(int index) {
+    const avatars = [
+      _avatar1,
+      _avatar2,
+      _avatar3,
+      _avatar4,
+      _avatar5,
+      _avatar6,
+      _avatar7,
+      _avatar8,
+      _avatar9,
+    ];
+    return avatars[index % avatars.length];
+  }
+
+  Future<void> _handleSelectAll(_FamilyGroup group) async {
+    try {
+      final members = await _loadAllFamilyMembers(group.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _selectedFamilyIds
+          ..clear()
+          ..add(group.id);
+      });
+
+      Navigator.of(context).pop(
+        FamilySelectionResult(
+          familyId: group.id,
+          familyName: group.name,
+          members: members,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to select all members: $e')),
+      );
+    }
+  }
+
+  Future<void> _handleOpenFamily(_FamilyGroup group) async {
+    final result = await Navigator.of(context).push<List<SelectedTaskMember>>(
+      MaterialPageRoute(
+        builder: (_) => SelectMembersScreen(
+          initialSelectedIds: widget.initialSelectedIds,
+          familyId: group.id,
+          familyName: group.name,
+        ),
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _selectedFamilyIds
+        ..clear()
+        ..add(group.id);
+    });
+
+    Navigator.of(context).pop(
+      FamilySelectionResult(
+        familyId: group.id,
+        familyName: group.name,
+        members: result,
+      ),
+    );
   }
 
   @override
@@ -257,20 +431,41 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 80),
-                const Icon(Icons.error_outline, size: 40, color: Colors.redAccent),
+                const Icon(
+                  Icons.error_outline,
+                  size: 40,
+                  color: Colors.redAccent,
+                ),
                 const SizedBox(height: 12),
                 Text(
                   'Failed to load families\n${snapshot.error}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _headline),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _headline,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GestureDetector(
                   onTap: _refreshFamilies,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    decoration: BoxDecoration(color: _accent, borderRadius: BorderRadius.circular(16)),
-                    child: const Text('Retry', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.black87)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _accent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Text(
+                      'Retry',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -288,9 +483,24 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
                 SizedBox(height: 80),
                 Icon(Icons.groups_outlined, size: 44, color: Colors.grey),
                 SizedBox(height: 12),
-                Text('No family found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _headline)),
+                Text(
+                  'No family found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: _headline,
+                  ),
+                ),
                 SizedBox(height: 8),
-                Text('Create a new family or join one via invitation link', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black54)),
+                Text(
+                  'Create a new family or join one via invitation link',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black54,
+                  ),
+                ),
               ],
             ),
           );
@@ -307,31 +517,15 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
               children: groups
                   .map(
                     (group) => Padding(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      child: _FamilyGroupCard(
-                        group: group,
-                        selected: _selectedFamilyIds.contains(group.id),
-                        onSelectAll: () {
-                          setState(() {
-                            _selectedFamilyIds.add(group.id);
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Selected all members from ${group.name}'),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => FamilyScreen(familyId: group.id, familyName: group.name),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  )
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: _FamilyGroupCard(
+                    group: group,
+                    selected: _selectedFamilyIds.contains(group.id),
+                    onSelectAll: () => _handleSelectAll(group),
+                    onTap: () => _handleOpenFamily(group),
+                  ),
+                ),
+              )
                   .toList(growable: false),
             ),
           ),
@@ -405,7 +599,10 @@ class _FamilyGroupCard extends StatelessWidget {
                 ),
                 if (selected)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _accent.withOpacity(0.25),
                       borderRadius: BorderRadius.circular(12),
@@ -432,31 +629,50 @@ class _FamilyGroupCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _buildAvatars(),
+                ...List.generate(group.avatars.length, (index) {
+                  return Align(
+                    widthFactor: 0.75,
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.white,
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundImage: NetworkImage(group.avatars[index]),
+                      ),
+                    ),
+                  );
+                }),
+                if (group.extraCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      '+${group.extraCount}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _headline,
+                      ),
+                    ),
+                  ),
+                const Spacer(),
                 GestureDetector(
                   onTap: onSelectAll,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: _accent,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 2,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(999),
                     ),
                     child: const Text(
-                      'Select All',
+                      'Select all',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: _headline,
+                        color: Colors.black,
                       ),
                     ),
                   ),
@@ -465,70 +681,6 @@ class _FamilyGroupCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildAvatars() {
-    final avatars = group.avatars;
-    final children = <Widget>[];
-
-    for (var i = 0; i < avatars.length; i++) {
-      children.add(
-        Transform.translate(
-          offset: Offset(i > 0 ? -8 : 0, 0),
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFFCFBF8), width: 2),
-            ),
-            child: ClipOval(
-              child: Image.network(
-                avatars[i],
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey.shade300,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (group.extraCount > 0) {
-      children.add(
-        Transform.translate(
-          offset: const Offset(-8, 0),
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: _accent.withOpacity(0.2),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFFCFBF8), width: 2),
-            ),
-            child: Center(
-              child: Text(
-                '+${group.extraCount}',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: _accent,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ClipRect(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: children,
       ),
     );
   }

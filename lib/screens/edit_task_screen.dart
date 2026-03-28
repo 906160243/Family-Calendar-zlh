@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../assets/figma_assets.dart';
 import '../models/task.dart';
 import 'family_selection_screen.dart';
+import 'select_members_screen.dart';
 
 class EditTaskScreen extends StatefulWidget {
   const EditTaskScreen({
@@ -32,8 +34,14 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _notesController;
   late Task _task;
+
   bool _isDeleting = false;
   bool _isUpdating = false;
+  bool _isLoadingParticipants = true;
+
+  String? _selectedFamilyId;
+  String? _selectedFamilyName;
+  List<SelectedTaskMember> _selectedParticipants = [];
 
   @override
   void initState() {
@@ -41,6 +49,87 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     _task = widget.initialTask;
     _titleController = TextEditingController(text: _task.title);
     _notesController = TextEditingController(text: _task.notes);
+    _loadInitialParticipants();
+  }
+
+  Future<Map<String, dynamic>?> _findUserByUid(String uid) async {
+    final firestore = FirebaseFirestore.instance;
+
+    final directDoc = await firestore.collection('users').doc(uid).get();
+    if (directDoc.exists) {
+      return directDoc.data();
+    }
+
+    final query = await firestore
+        .collection('users')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      return query.docs.first.data();
+    }
+
+    return null;
+  }
+
+  Future<void> _loadInitialParticipants() async {
+    final taskId = _task.id;
+    if (taskId == null || taskId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingParticipants = false;
+      });
+      return;
+    }
+
+    try {
+      final doc =
+      await FirebaseFirestore.instance.collection('events').doc(taskId).get();
+
+      final data = doc.data() ?? {};
+      final familyId = (data['familyId'] ?? '').toString().trim();
+      final participantIds =
+      ((data['participantIds'] as List?) ?? []).map((e) => e.toString()).toList();
+
+      final List<SelectedTaskMember> members = [];
+
+      for (final uid in participantIds) {
+        final userData = await _findUserByUid(uid);
+        final name = (userData?['fullName'] ??
+            userData?['name'] ??
+            userData?['displayName'] ??
+            'Unknown Member')
+            .toString()
+            .trim();
+        final avatarUrl = (userData?['photoURL'] ??
+            userData?['photoUrl'] ??
+            userData?['avatar'] ??
+            '')
+            .toString()
+            .trim();
+
+        members.add(
+          SelectedTaskMember(
+            id: uid,
+            name: name.isEmpty ? 'Unknown Member' : name,
+            avatarUrl: avatarUrl,
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _selectedFamilyId = familyId.isEmpty ? null : familyId;
+        _selectedParticipants = members;
+        _isLoadingParticipants = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingParticipants = false;
+      });
+    }
   }
 
   Future<void> _pickDate() async {
@@ -105,7 +194,35 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     }
   }
 
+  Future<void> _openFamilySelection() async {
+    final result = await Navigator.of(context).push<FamilySelectionResult>(
+      MaterialPageRoute(
+        builder: (_) => FamilySelectionScreen(
+          initialSelectedIds: _selectedParticipants.map((e) => e.id).toList(),
+        ),
+      ),
+    );
 
+    if (result == null) return;
+
+    setState(() {
+      _selectedFamilyId = result.familyId;
+      _selectedFamilyName = result.familyName;
+      _selectedParticipants = result.members;
+    });
+  }
+
+  List<String> _buildParticipantIds(String currentUid) {
+    final ids = <String>{currentUid};
+
+    for (final member in _selectedParticipants) {
+      if (member.id.trim().isNotEmpty) {
+        ids.add(member.id.trim());
+      }
+    }
+
+    return ids.toList();
+  }
 
   @override
   void dispose() {
@@ -151,6 +268,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         'eventType': _mapCategoryToEventType(updated.category),
         'startTime': Timestamp.fromDate(updated.startTime),
         'endTime': Timestamp.fromDate(updated.endTime),
+        'familyId': _selectedFamilyId,
+        'participantIds': _buildParticipantIds(user.uid),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -191,10 +310,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     });
 
     try {
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(taskId)
-          .delete();
+      await FirebaseFirestore.instance.collection('events').doc(taskId).delete();
 
       if (!mounted) return;
 
@@ -229,6 +345,38 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Widget _buildParticipantAvatar(SelectedTaskMember member) {
+    final hasImage = member.avatarUrl.trim().isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: CircleAvatar(
+        radius: 22,
+        backgroundColor: const Color(0xFFDCE1E8),
+        backgroundImage: hasImage ? NetworkImage(member.avatarUrl) : null,
+        child: hasImage
+            ? null
+            : Text(
+          _memberInitials(member.name),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _memberInitials(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '?';
+    return parts.take(2).map((e) => e[0]).join().toUpperCase();
   }
 
   @override
@@ -587,11 +735,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             controller: _notesController,
             maxLines: 4,
             maxLength: 120,
-            maxLengthEnforcement: MaxLengthEnforcement.enforced, // ✅ 关键：禁止继续输入
+            maxLengthEnforcement: MaxLengthEnforcement.enforced,
             onChanged: (value) {
               if (value.length == 120) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Maximum character limit reached')),
+                  const SnackBar(
+                    content: Text('Maximum character limit reached'),
+                  ),
                 );
               }
             },
@@ -614,8 +764,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Widget _buildParticipantsSection() {
-    final user = FirebaseAuth.instance.currentUser;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -631,13 +779,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const FamilySelectionScreen(),
-                  ),
-                );
-              },
+              onPressed: _openFamilySelection,
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(50, 32),
@@ -655,51 +797,24 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           ],
         ),
         const SizedBox(height: 12),
-          Row(
-          children: [
-          if (user != null)
-          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .snapshots(),
-          builder: (context, snapshot) {
-          String photoUrl = '';
-
-          if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data();
-          photoUrl = (data?['photoURL'] ?? '').toString().trim();
-          }
-
-          return Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: _buildCurrentUserAvatar(photoUrl),
-          );
-          },
-          ),
-          ],
+        if (_isLoadingParticipants)
+          const SizedBox(
+            height: 44,
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: _accentColor,
+              ),
+            ),
+          )
+        else
+          Wrap(
+            children:
+            _selectedParticipants.map(_buildParticipantAvatar).toList(),
           ),
       ],
     );
   }
-
-  Widget _buildCurrentUserAvatar(String photoUrl) {
-    final hasImage = photoUrl.isNotEmpty;
-
-    return CircleAvatar(
-      radius: 22,
-      backgroundColor: const Color(0xFFDCE1E8),
-      backgroundImage: hasImage ? NetworkImage(photoUrl) : null,
-      child: hasImage
-          ? null
-          : const Icon(
-        Icons.person,
-        color: Colors.white,
-        size: 20,
-      ),
-    );
-  }
-
 
   Widget _buildReminderCard() {
     return Container(
@@ -733,8 +848,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
+              children: const [
+                Text(
                   'Reminders',
                   style: TextStyle(
                     fontSize: 16,
@@ -742,8 +857,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                     color: _primaryColor,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
+                SizedBox(height: 4),
+                Text(
                   '15 minutes before',
                   style: TextStyle(
                     fontSize: 13,
@@ -754,14 +869,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               ],
             ),
           ),
-          Switch(
-            value: _task.reminderEnabled,
+          const Switch(
+            value: true,
             activeColor: _accentColor,
-            onChanged: (value) {
-              setState(() {
-                _task = _task.copyWith(reminderEnabled: value);
-              });
-            },
+            onChanged: null,
           ),
         ],
       ),
@@ -769,56 +880,67 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    final disableButtons = _isDeleting || _isUpdating;
-
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
           width: double.infinity,
           height: 56,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFDBA3C), Color(0xFFFFA800)],
+          child: ElevatedButton(
+            onPressed: _isUpdating ? null : _applyUpdate,
+            style: ElevatedButton.styleFrom(
+              elevation: 0,
+              backgroundColor: _accentColor,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFEA9E22).withOpacity(0.35),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
             ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(24),
-                onTap: disableButtons ? null : _applyUpdate,
-                child: Center(
-                  child: Text(
-                    _isUpdating ? 'Updating...' : 'Update Task',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                ),
+            child: _isUpdating
+                ? const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Colors.black,
+              ),
+            )
+                : const Text(
+              'Update Task',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
         ),
         const SizedBox(height: 12),
-        TextButton(
-          onPressed: disableButtons ? null : _deleteTask,
-          child: Text(
-            _isDeleting ? 'Deleting...' : 'Delete Task',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFFEF4444),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: OutlinedButton(
+            onPressed: _isDeleting ? null : _deleteTask,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.redAccent,
+              side: const BorderSide(color: Colors.redAccent),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: _isDeleting
+                ? const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Colors.redAccent,
+              ),
+            )
+                : const Text(
+              'Delete Task',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ),
@@ -826,4 +948,3 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     );
   }
 }
-//wait for test

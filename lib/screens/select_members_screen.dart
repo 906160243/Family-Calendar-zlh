@@ -111,36 +111,35 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
       final members = <FamilyMember>[];
       for (final doc in snapshot.docs) {
         final memberData = doc.data();
-        final userId = (memberData['uid'] ?? memberData['userId'] ?? doc.id)
-            .toString()
-            .trim();
+        final userId =
+        (memberData['uid'] ?? memberData['userId'] ?? doc.id).toString().trim();
         if (userId.isEmpty) continue;
 
         final userData = await _findUserByUid(userId);
         final name =
-            (userData?['fullName'] ??
-                    userData?['name'] ??
-                    userData?['displayName'] ??
-                    memberData['nickname'] ??
-                    memberData['fullName'] ??
-                    memberData['name'] ??
-                    'Unknown Member')
-                .toString()
-                .trim();
+        (userData?['fullName'] ??
+            userData?['name'] ??
+            userData?['displayName'] ??
+            memberData['nickname'] ??
+            memberData['fullName'] ??
+            memberData['name'] ??
+            'Unknown Member')
+            .toString()
+            .trim();
         final role =
-            (memberData['role'] ?? memberData['familyRole'] ?? 'member')
-                .toString()
-                .trim();
+        (memberData['role'] ?? memberData['familyRole'] ?? 'member')
+            .toString()
+            .trim();
         final photoUrl =
-            (userData?['photoURL'] ??
-                    userData?['photoUrl'] ??
-                    userData?['avatar'] ??
-                    memberData['photoURL'] ??
-                    memberData['photoUrl'] ??
-                    memberData['avatar'] ??
-                    '')
-                .toString()
-                .trim();
+        (userData?['photoURL'] ??
+            userData?['photoUrl'] ??
+            userData?['avatar'] ??
+            memberData['photoURL'] ??
+            memberData['photoUrl'] ??
+            memberData['avatar'] ??
+            '')
+            .toString()
+            .trim();
 
         members.add(
           FamilyMember(
@@ -165,6 +164,19 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  List<SelectedTaskMember> _buildSelectedMembersResult() {
+    return _members
+        .where((m) => m.selected)
+        .map(
+          (m) => SelectedTaskMember(
+        id: m.id,
+        name: m.name,
+        avatarUrl: m.imageUrl,
+      ),
+    )
+        .toList();
   }
 
   @override
@@ -343,17 +355,16 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: const Color(0xFFF4DFC0),
-                  backgroundImage: member.imageUrl.isNotEmpty
-                      ? NetworkImage(member.imageUrl)
-                      : null,
+                  backgroundImage:
+                  member.imageUrl.isNotEmpty ? NetworkImage(member.imageUrl) : null,
                   child: member.imageUrl.isEmpty
                       ? Text(
-                          _memberInitials(member.name),
-                          style: const TextStyle(
-                            color: Color(0xFF8A6D2F),
-                            fontWeight: FontWeight.w800,
-                          ),
-                        )
+                    _memberInitials(member.name),
+                    style: const TextStyle(
+                      color: Color(0xFF8A6D2F),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  )
                       : null,
                 ),
                 const SizedBox(width: 12),
@@ -386,9 +397,8 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                   height: 24,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: member.selected
-                        ? const Color(0xFFFDBA3C)
-                        : Colors.white,
+                    color:
+                    member.selected ? const Color(0xFFFDBA3C) : Colors.white,
                     border: Border.all(
                       color: const Color(0xFFE5E7EB),
                       width: 1.5,
@@ -477,17 +487,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
             child: InkWell(
               borderRadius: BorderRadius.circular(24),
               onTap: () {
-                final selectedMembers = _members
-                    .where((m) => m.selected)
-                    .map(
-                      (m) => SelectedTaskMember(
-                        id: m.id,
-                        name: m.name,
-                        avatarUrl: m.imageUrl,
-                      ),
-                    )
-                    .toList();
-                Navigator.of(context).pop(selectedMembers);
+                Navigator.of(context).pop(_buildSelectedMembersResult());
               },
               child: const Center(
                 child: Text(
