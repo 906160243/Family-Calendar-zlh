@@ -40,6 +40,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const _dateHorizontalPadding = 16.0;
 
   final ScrollController _dateScrollController = ScrollController();
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _eventsStream;
+  List<_CalendarEvent> _cachedEvents = <_CalendarEvent>[];
   int _selectedNavIndex = 2;
   late final List<DateTime> _days;
   late int _selectedDayIndex;
@@ -49,9 +51,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.initState();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final user = FirebaseAuth.instance.currentUser;
 
-    _days = List.generate(7, (index) => today.add(Duration(days: index - 3)));
+    _days = List.generate(
+      7,
+      (index) => DateTime(today.year, today.month, today.day + index - 3),
+    );
     _selectedDayIndex = 3;
+
+    if (user != null) {
+      _eventsStream = FirebaseFirestore.instance
+          .collection('events')
+          .where('participantIds', arrayContains: user.uid)
+          .where('status', isEqualTo: 'active')
+          .snapshots();
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _centerSelectedDay(animate: false);
@@ -383,9 +397,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildTimeline(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
+    if (_eventsStream == null) {
       return const Center(
         child: Text(
           'Please sign in first.',
@@ -399,16 +411,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('events')
-          .where('participantIds', arrayContains: user.uid)
-          .where('status', isEqualTo: 'active')
-          .snapshots(),
+      stream: _eventsStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
         if (snapshot.hasError) {
           return const Center(
             child: Text(
@@ -428,16 +432,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 .where((event) => event != null)
                 .cast<_CalendarEvent>()
                 .toList() ??
-            <_CalendarEvent>[];
+            _cachedEvents;
 
-        final selectedEvents = allEvents
-          ..where((event) => _isSameDay(event.startTime, _selectedDate))
-          ..toList();
+        if (snapshot.hasData) {
+          _cachedEvents = allEvents;
+        }
 
-        final filteredEvents = allEvents
-          ..where((event) => _isSameDay(event.startTime, _selectedDate))
-          ..toList()
-          ..sort((a, b) => a.startTime.compareTo(b.startTime));
+        final filteredEvents =
+            allEvents
+                .where((event) => _isSameDay(event.startTime, _selectedDate))
+                .toList()
+              ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
         return FutureBuilder<List<dynamic>>(
           future: Future.wait([
@@ -445,10 +450,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
             _loadParticipantAvatars(filteredEvents),
           ]),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
             final participantNames =
                 (snapshot.data?[0] as Map<String, String>?) ??
                 <String, String>{};
@@ -555,6 +556,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       top: item.lineTopPadding,
                                     ),
                                     child: Container(
+                                      width: double.infinity,
                                       height: 2,
                                       color: const Color(0xFFF1F5F9),
                                     ),
@@ -845,7 +847,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    final localA = a.toLocal();
+    final localB = b.toLocal();
+    return localA.year == localB.year &&
+        localA.month == localB.month &&
+        localA.day == localB.day;
   }
 
   Widget _buildFab(BuildContext context) {

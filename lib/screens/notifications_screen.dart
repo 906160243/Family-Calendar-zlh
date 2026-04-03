@@ -8,17 +8,28 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: AppTheme.pageBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildAppBar(context),
-            Expanded(
-              child: _buildBody(context),
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                _buildAppBar(context),
+                Expanded(child: _buildBody(context)),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -28,9 +39,7 @@ class NotificationsScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: BoxDecoration(
         color: AppTheme.headerBackground,
-        boxShadow: const [
-          AppTheme.headerShadow,
-        ],
+        boxShadow: const [AppTheme.headerShadow],
       ),
       child: Row(
         children: [
@@ -48,15 +57,11 @@ class NotificationsScreen extends StatelessWidget {
           ),
           IconButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings clicked')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Settings clicked')));
             },
-            icon: const Icon(
-              Icons.settings,
-              size: 24,
-              color: Colors.black87,
-            ),
+            icon: const Icon(Icons.settings, size: 24, color: Colors.black87),
           ),
         ],
       ),
@@ -96,9 +101,9 @@ class NotificationsScreen extends StatelessWidget {
       subtitle: 'John Doe wants to join the family calendar',
       action: TextButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Accept clicked')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Accept clicked')));
         },
         child: const Text('Accept'),
       ),
@@ -114,9 +119,9 @@ class NotificationsScreen extends StatelessWidget {
       subtitle: 'Your family event is set for tomorrow at 6:00 PM',
       action: TextButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('View clicked')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('View clicked')));
         },
         child: const Text('View'),
       ),
@@ -132,9 +137,9 @@ class NotificationsScreen extends StatelessWidget {
       subtitle: 'Sunday Roast moved to 7:00 PM',
       action: TextButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('View clicked')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('View clicked')));
         },
         child: const Text('View'),
       ),
@@ -150,9 +155,9 @@ class NotificationsScreen extends StatelessWidget {
       subtitle: 'Dad finished grocery shopping',
       action: TextButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Got it clicked')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Got it clicked')));
         },
         child: const Text('Got it'),
       ),
@@ -160,13 +165,13 @@ class NotificationsScreen extends StatelessWidget {
   }
 
   Widget _notificationCard(
-      BuildContext context, {
-        required IconData icon,
-        required Color iconBackground,
-        required String title,
-        required String subtitle,
-        required Widget action,
-      }) {
+    BuildContext context, {
+    required IconData icon,
+    required Color iconBackground,
+    required String title,
+    required String subtitle,
+    required Widget action,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
@@ -174,10 +179,7 @@ class NotificationsScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
           ],
         ),
         child: ListTile(

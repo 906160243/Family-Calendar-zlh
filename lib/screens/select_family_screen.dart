@@ -466,6 +466,7 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
     await showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.3),
+      useSafeArea: false,
       builder: (context) {
         return const CreateFamilyDialog();
       },

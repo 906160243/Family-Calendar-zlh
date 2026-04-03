@@ -85,30 +85,35 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     }
 
     try {
-      final doc =
-      await FirebaseFirestore.instance.collection('events').doc(taskId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('events')
+          .doc(taskId)
+          .get();
 
       final data = doc.data() ?? {};
       final familyId = (data['familyId'] ?? '').toString().trim();
-      final participantIds =
-      ((data['participantIds'] as List?) ?? []).map((e) => e.toString()).toList();
+      final participantIds = ((data['participantIds'] as List?) ?? [])
+          .map((e) => e.toString())
+          .toList();
 
       final List<SelectedTaskMember> members = [];
 
       for (final uid in participantIds) {
         final userData = await _findUserByUid(uid);
-        final name = (userData?['fullName'] ??
-            userData?['name'] ??
-            userData?['displayName'] ??
-            'Unknown Member')
-            .toString()
-            .trim();
-        final avatarUrl = (userData?['photoURL'] ??
-            userData?['photoUrl'] ??
-            userData?['avatar'] ??
-            '')
-            .toString()
-            .trim();
+        final name =
+            (userData?['fullName'] ??
+                    userData?['name'] ??
+                    userData?['displayName'] ??
+                    'Unknown Member')
+                .toString()
+                .trim();
+        final avatarUrl =
+            (userData?['photoURL'] ??
+                    userData?['photoUrl'] ??
+                    userData?['avatar'] ??
+                    '')
+                .toString()
+                .trim();
 
         members.add(
           SelectedTaskMember(
@@ -187,10 +192,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
         final newEnd = newStart.add(duration);
 
-        _task = _task.copyWith(
-          startTime: newStart,
-          endTime: newEnd,
-        );
+        _task = _task.copyWith(startTime: newStart, endTime: newEnd);
       });
     }
   }
@@ -253,10 +255,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         : _titleController.text.trim();
     final notes = _notesController.text.trim();
 
-    final updated = _task.copyWith(
-      title: title,
-      notes: notes,
-    );
+    final updated = _task.copyWith(title: title, notes: notes);
 
     setState(() {
       _isUpdating = true;
@@ -311,7 +310,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     });
 
     try {
-      await FirebaseFirestore.instance.collection('events').doc(taskId).delete();
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(taskId)
+          .delete();
 
       if (!mounted) return;
 
@@ -343,9 +345,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildParticipantAvatar(SelectedTaskMember member) {
@@ -360,12 +362,12 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         child: hasImage
             ? null
             : Text(
-          _memberInitials(member.name),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+                _memberInitials(member.name),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
       ),
     );
   }
@@ -382,49 +384,59 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: _background,
-      body: Container(
-        color: _background,
-        child: SafeArea(
-          child: Center(
-            child: Container(
-              width: 430,
-              constraints: const BoxConstraints(maxWidth: 430),
-              color: _background,
-              child: Column(
-                children: [
-                  _buildHeader(context),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 18),
-                          _buildTitleSection(),
-                          const SizedBox(height: 20),
-                          _buildDateTimeCard(),
-                          const SizedBox(height: 20),
-                          _buildNotesSection(),
-                          const SizedBox(height: 20),
-                          _buildParticipantsSection(),
-                          const SizedBox(height: 20),
-                          _buildReminderCard(),
-                          const SizedBox(height: 20),
-                          _buildActionButtons(context),
-                        ],
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            child: Center(
+              child: Container(
+                width: 430,
+                constraints: const BoxConstraints(maxWidth: 430),
+                color: _background,
+                child: Column(
+                  children: [
+                    _buildHeader(context),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 18),
+                            _buildTitleSection(),
+                            const SizedBox(height: 20),
+                            _buildDateTimeCard(),
+                            const SizedBox(height: 20),
+                            _buildNotesSection(),
+                            const SizedBox(height: 20),
+                            _buildParticipantsSection(),
+                            const SizedBox(height: 20),
+                            _buildReminderCard(),
+                            const SizedBox(height: 20),
+                            _buildActionButtons(context),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -434,9 +446,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: const BoxDecoration(
         color: AppTheme.headerBackground,
-        boxShadow: [
-          AppTheme.headerShadow,
-        ],
+        boxShadow: [AppTheme.headerShadow],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -736,10 +746,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               ),
               border: InputBorder.none,
             ),
-            style: const TextStyle(
-              color: Color(0xFF334155),
-              fontSize: 15,
-            ),
+            style: const TextStyle(color: Color(0xFF334155), fontSize: 15),
           ),
         ),
       ],
@@ -792,8 +799,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           )
         else
           Wrap(
-            children:
-            _selectedParticipants.map(_buildParticipantAvatar).toList(),
+            children: _selectedParticipants
+                .map(_buildParticipantAvatar)
+                .toList(),
           ),
       ],
     );
@@ -822,10 +830,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.notifications,
-              color: _accentColor,
-            ),
+            child: const Icon(Icons.notifications, color: _accentColor),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -852,11 +857,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               ],
             ),
           ),
-          const Switch(
-            value: true,
-            activeColor: _accentColor,
-            onChanged: null,
-          ),
+          const Switch(value: true, activeColor: _accentColor, onChanged: null),
         ],
       ),
     );
@@ -880,20 +881,17 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             ),
             child: _isUpdating
                 ? const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: Colors.black,
-              ),
-            )
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.black,
+                    ),
+                  )
                 : const Text(
-              'Update Task',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+                    'Update Task',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
           ),
         ),
         const SizedBox(height: 12),
@@ -911,20 +909,17 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             ),
             child: _isDeleting
                 ? const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: Colors.redAccent,
-              ),
-            )
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.redAccent,
+                    ),
+                  )
                 : const Text(
-              'Delete Task',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+                    'Delete Task',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
           ),
         ),
       ],

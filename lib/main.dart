@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'firebase_options.dart';
 import 'screens/calendar_screen.dart';
@@ -25,6 +26,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppTheme.accent),
         scaffoldBackgroundColor: AppTheme.pageBackground,
+        textTheme: GoogleFonts.plusJakartaSansTextTheme(),
+        primaryTextTheme: GoogleFonts.plusJakartaSansTextTheme(),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppTheme.headerBackground,
           surfaceTintColor: Colors.transparent,

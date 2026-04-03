@@ -105,9 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const MemoScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const MemoScreen()),
       );
     } on FirebaseAuthException catch (e) {
       _showMessage(_getFirebaseAuthErrorMessage(e));
@@ -162,9 +160,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -251,18 +249,11 @@ class _LoginScreenState extends State<LoginScreen> {
           height: 80,
           decoration: BoxDecoration(
             color: accentColor.withOpacity(0.2),
-            border: Border.all(
-              color: accentColor.withOpacity(0.1),
-              width: 1,
-            ),
+            border: Border.all(color: accentColor.withOpacity(0.1), width: 1),
             borderRadius: BorderRadius.circular(100),
           ),
           child: const Center(
-            child: Icon(
-              Icons.location_on,
-              size: 40,
-              color: accentColor,
-            ),
+            child: Icon(Icons.location_on, size: 40, color: accentColor),
           ),
         ),
         const SizedBox(height: 16),
@@ -273,7 +264,6 @@ class _LoginScreenState extends State<LoginScreen> {
             fontWeight: FontWeight.bold,
             color: primaryColor,
             letterSpacing: -0.75,
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
         const SizedBox(height: 8),
@@ -283,7 +273,6 @@ class _LoginScreenState extends State<LoginScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: hintColor,
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
       ],
@@ -332,7 +321,6 @@ class _LoginScreenState extends State<LoginScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: labelColor,
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
         const SizedBox(height: 8),
@@ -352,15 +340,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 hintStyle: TextStyle(
                   color: hintColor.withOpacity(0.5),
                   fontSize: 16,
-                  fontFamily: 'Plus Jakarta Sans',
                 ),
                 border: InputBorder.none,
               ),
-              style: const TextStyle(
-                fontSize: 16,
-                color: primaryColor,
-                fontFamily: 'Plus Jakarta Sans',
-              ),
+              style: const TextStyle(fontSize: 16, color: primaryColor),
             ),
           ),
         ),
@@ -378,7 +361,6 @@ class _LoginScreenState extends State<LoginScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: labelColor,
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
         const SizedBox(height: 8),
@@ -398,7 +380,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 hintStyle: TextStyle(
                   color: hintColor.withOpacity(0.5),
                   fontSize: 16,
-                  fontFamily: 'Plus Jakarta Sans',
                 ),
                 border: InputBorder.none,
                 suffixIcon: GestureDetector(
@@ -414,11 +395,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              style: const TextStyle(
-                fontSize: 16,
-                color: primaryColor,
-                fontFamily: 'Plus Jakarta Sans',
-              ),
+              style: const TextStyle(fontSize: 16, color: primaryColor),
             ),
           ),
         ),
@@ -445,25 +422,24 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: _isLoading
                 ? const Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-            )
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                  )
                 : const Text(
-              'Sign In',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
-                fontFamily: 'Plus Jakarta Sans',
-              ),
-            ),
+                    'Sign In',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
           ),
         ),
       ),
@@ -482,17 +458,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: hintColor,
-                fontFamily: 'Plus Jakarta Sans',
               ),
             ),
           ),
         ),
         const SizedBox(height: 16),
-        const Divider(
-          color: Color(0xFFF1F5F9),
-          height: 1,
-          thickness: 1,
-        ),
+        const Divider(color: Color(0xFFF1F5F9), height: 1, thickness: 1),
         const SizedBox(height: 25),
         Center(
           child: RichText(
@@ -502,7 +473,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
                 color: hintColor,
-                fontFamily: 'Plus Jakarta Sans',
               ),
               children: [
                 const TextSpan(text: 'Don\'t have an account? '),
@@ -521,7 +491,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: accentColor,
-                        fontFamily: 'Plus Jakarta Sans',
                       ),
                     ),
                   ),

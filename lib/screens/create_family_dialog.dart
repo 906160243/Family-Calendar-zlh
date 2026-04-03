@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../themes/app_theme.dart';
-
 class CreateFamilyDialog extends StatefulWidget {
   const CreateFamilyDialog({Key? key}) : super(key: key);
 
@@ -70,12 +68,12 @@ class _CreateFamilyDialogState extends State<CreateFamilyDialog> {
           .collection('families')
           .doc(familyRef.id)
           .set({
-        'familyId': familyRef.id,
-        'familyName': familyName,
-        'joinedAt': now,
-        'photoURL': '',
-        'role': 'owner',
-      });
+            'familyId': familyRef.id,
+            'familyName': familyName,
+            'joinedAt': now,
+            'photoURL': '',
+            'role': 'owner',
+          });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -87,9 +85,7 @@ class _CreateFamilyDialogState extends State<CreateFamilyDialog> {
       print('Create family error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Failed to create family: ${e.toString()}',
-          ),
+          content: Text('Failed to create family: ${e.toString()}'),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -102,9 +98,10 @@ class _CreateFamilyDialogState extends State<CreateFamilyDialog> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: GestureDetector(
@@ -115,154 +112,164 @@ class _CreateFamilyDialogState extends State<CreateFamilyDialog> {
             Align(
               alignment: Alignment.bottomCenter,
               child: GestureDetector(
-                onTap: () {
-                  // Prevent click from propagating to outer GestureDetector
-                },
-                child: Container(
-                  width: double.infinity,
-                  height: 380,
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.14),
-                        blurRadius: 16,
-                        offset: const Offset(0, -4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Create a family',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(999),
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3EEE0),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.close,
-                              size: 18,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Family name',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
+                onTap: () {},
+                child: AnimatedPadding(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  padding: EdgeInsets.only(bottom: keyboardInset),
+                  child: Container(
+                    width: double.infinity,
+                    height: 380,
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF3EEE0),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TextField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'e.g. Johnson Family',
-                        hintStyle: TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.14),
+                          blurRadius: 16,
+                          offset: const Offset(0, -4),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  GestureDetector(
-                    onTap: _isLoading ? null : _createFamily,
-                    child: Opacity(
-                      opacity: _isLoading ? 0.6 : 1.0,
-                      child: Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [Color(0xFFFAC638), Color(0xFFF59E0B)],
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFAC638).withOpacity(0.2),
-                              blurRadius: 15,
-                              offset: const Offset(0, 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Create a family',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(999),
+                              onTap: () => Navigator.of(context).pop(),
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3EEE0),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.black87,
-                                    ),
-                                  ),
-                                )
-                              : const Text(
-                                  'Create',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.black87,
-                                  ),
-                                ),
+                        const SizedBox(height: 18),
+                        const Text(
+                          'Family name',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 10),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3EEE0),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: TextField(
+                            controller: _nameController,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'e.g. Johnson Family',
+                              hintStyle: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        GestureDetector(
+                          onTap: _isLoading ? null : _createFamily,
+                          child: Opacity(
+                            opacity: _isLoading ? 0.6 : 1.0,
+                            child: Container(
+                              width: double.infinity,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    Color(0xFFFAC638),
+                                    Color(0xFFF59E0B),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFFFAC638,
+                                    ).withOpacity(0.2),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.black87,
+                                              ),
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Create',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Invitation will be sent directly using your account email (not via external link).',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Invitation will be sent directly using your account email (not via external link).',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
-      ])),
+      ),
     );
-
   }
 }

@@ -46,10 +46,8 @@ class FamilySelectionResult {
 }
 
 class FamilySelectionScreen extends StatefulWidget {
-  const FamilySelectionScreen({
-    Key? key,
-    this.initialSelectedIds = const [],
-  }) : super(key: key);
+  const FamilySelectionScreen({Key? key, this.initialSelectedIds = const []})
+    : super(key: key);
 
   final List<String> initialSelectedIds;
 
@@ -81,8 +79,9 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
     final userDoc = await firestore.collection('users').doc(memberId).get();
     if (userDoc.exists) {
       final userData = userDoc.data() ?? {};
-      final photoURL =
-      (userData['photoURL'] ?? userData['avatar'] ?? '').toString().trim();
+      final photoURL = (userData['photoURL'] ?? userData['avatar'] ?? '')
+          .toString()
+          .trim();
       if (photoURL.isNotEmpty) {
         return photoURL;
       }
@@ -96,8 +95,9 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
         .get();
 
     if (familyMemberDoc.exists) {
-      final String photoURL =
-      (familyMemberDoc.data()?['photoURL'] ?? '').toString().trim();
+      final String photoURL = (familyMemberDoc.data()?['photoURL'] ?? '')
+          .toString()
+          .trim();
       if (photoURL.isNotEmpty) {
         return photoURL;
       }
@@ -127,7 +127,9 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
     return null;
   }
 
-  Future<List<SelectedTaskMember>> _loadAllFamilyMembers(String familyId) async {
+  Future<List<SelectedTaskMember>> _loadAllFamilyMembers(
+    String familyId,
+  ) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('families')
         .doc(familyId)
@@ -138,33 +140,34 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
 
     for (final doc in snapshot.docs) {
       final memberData = doc.data();
-      final userId =
-      (memberData['uid'] ?? memberData['userId'] ?? doc.id).toString().trim();
+      final userId = (memberData['uid'] ?? memberData['userId'] ?? doc.id)
+          .toString()
+          .trim();
 
       if (userId.isEmpty) continue;
 
       final userData = await _findUserByUid(userId);
       final name =
-      (userData?['fullName'] ??
-          userData?['name'] ??
-          userData?['displayName'] ??
-          memberData['nickname'] ??
-          memberData['fullName'] ??
-          memberData['name'] ??
-          'Unknown Member')
-          .toString()
-          .trim();
+          (userData?['fullName'] ??
+                  userData?['name'] ??
+                  userData?['displayName'] ??
+                  memberData['nickname'] ??
+                  memberData['fullName'] ??
+                  memberData['name'] ??
+                  'Unknown Member')
+              .toString()
+              .trim();
 
       final avatarUrl =
-      (userData?['photoURL'] ??
-          userData?['photoUrl'] ??
-          userData?['avatar'] ??
-          memberData['photoURL'] ??
-          memberData['photoUrl'] ??
-          memberData['avatar'] ??
-          '')
-          .toString()
-          .trim();
+          (userData?['photoURL'] ??
+                  userData?['photoUrl'] ??
+                  userData?['avatar'] ??
+                  memberData['photoURL'] ??
+                  memberData['photoUrl'] ??
+                  memberData['avatar'] ??
+                  '')
+              .toString()
+              .trim();
 
       members.add(
         SelectedTaskMember(
@@ -207,15 +210,18 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
     for (int i = 0; i < membershipSnapshot.docs.length; i++) {
       final membershipData = membershipSnapshot.docs[i].data();
 
-      final String familyId =
-      (membershipData['familyId'] ?? '').toString().trim();
+      final String familyId = (membershipData['familyId'] ?? '')
+          .toString()
+          .trim();
 
       if (familyId.isEmpty) {
         continue;
       }
 
-      final familyDoc =
-      await firestore.collection('families').doc(familyId).get();
+      final familyDoc = await firestore
+          .collection('families')
+          .doc(familyId)
+          .get();
 
       if (!familyDoc.exists) {
         continue;
@@ -234,8 +240,9 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
       for (int j = 0; j < membersSnapshot.docs.length; j++) {
         final memberDoc = membersSnapshot.docs[j];
 
-        String? photoUrl =
-        (memberDoc.data()['photoURL'] ?? '').toString().trim();
+        String? photoUrl = (memberDoc.data()['photoURL'] ?? '')
+            .toString()
+            .trim();
 
         if (photoUrl.isEmpty) {
           final loadedAvatar = await _loadMemberAvatar(memberDoc.id);
@@ -263,10 +270,11 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
       result.add(
         _FamilyGroup(
           id: familyId,
-          name: (familyData['familyName'] ??
-              membershipData['familyName'] ??
-              'Unnamed Family')
-              .toString(),
+          name:
+              (familyData['familyName'] ??
+                      membershipData['familyName'] ??
+                      'Unnamed Family')
+                  .toString(),
           memberCount: memberCount,
           avatars: avatars,
           extraCount: extraCount,
@@ -349,31 +357,49 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: AppTheme.pageBackground,
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            width: 430,
-            constraints: const BoxConstraints(maxWidth: 430),
-            height: double.infinity,
-            color: AppTheme.pageBackground,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 77),
-                      Expanded(child: _buildList()),
-                      const SizedBox(height: 242),
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            child: Center(
+              child: Container(
+                width: 430,
+                constraints: const BoxConstraints(maxWidth: 430),
+                height: double.infinity,
+                color: AppTheme.pageBackground,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 77),
+                          Expanded(child: _buildList()),
+                          const SizedBox(height: 242),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: _buildTopBar(),
+                    ),
+                  ],
                 ),
-                Positioned(top: 0, left: 0, right: 0, child: _buildTopBar()),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -384,9 +410,7 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       decoration: const BoxDecoration(
         color: AppTheme.headerBackground,
-        boxShadow: [
-          AppTheme.headerShadow,
-        ],
+        boxShadow: [AppTheme.headerShadow],
       ),
       child: Row(
         children: [
@@ -415,9 +439,7 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
       future: _groupsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: _accent),
-          );
+          return const Center(child: CircularProgressIndicator(color: _accent));
         }
 
         if (snapshot.hasError) {
@@ -512,15 +534,15 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
               children: groups
                   .map(
                     (group) => Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: _FamilyGroupCard(
-                    group: group,
-                    selected: _selectedFamilyIds.contains(group.id),
-                    onSelectAll: () => _handleSelectAll(group),
-                    onTap: () => _handleOpenFamily(group),
-                  ),
-                ),
-              )
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: _FamilyGroupCard(
+                        group: group,
+                        selected: _selectedFamilyIds.contains(group.id),
+                        onSelectAll: () => _handleSelectAll(group),
+                        onTap: () => _handleOpenFamily(group),
+                      ),
+                    ),
+                  )
                   .toList(growable: false),
             ),
           ),

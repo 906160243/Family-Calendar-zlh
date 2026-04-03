@@ -113,8 +113,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
 
       for (final doc in snapshot.docs) {
         final memberData = doc.data();
-        final userId =
-        (memberData['uid'] ?? memberData['userId'] ?? doc.id)
+        final userId = (memberData['uid'] ?? memberData['userId'] ?? doc.id)
             .toString()
             .trim();
 
@@ -123,31 +122,31 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
         final userData = await _findUserByUid(userId);
 
         final name =
-        (userData?['fullName'] ??
-            userData?['name'] ??
-            userData?['displayName'] ??
-            memberData['nickname'] ??
-            memberData['fullName'] ??
-            memberData['name'] ??
-            'Unknown Member')
-            .toString()
-            .trim();
+            (userData?['fullName'] ??
+                    userData?['name'] ??
+                    userData?['displayName'] ??
+                    memberData['nickname'] ??
+                    memberData['fullName'] ??
+                    memberData['name'] ??
+                    'Unknown Member')
+                .toString()
+                .trim();
 
         final role =
-        (memberData['role'] ?? memberData['familyRole'] ?? 'member')
-            .toString()
-            .trim();
+            (memberData['role'] ?? memberData['familyRole'] ?? 'member')
+                .toString()
+                .trim();
 
         final photoUrl =
-        (userData?['photoURL'] ??
-            userData?['photoUrl'] ??
-            userData?['avatar'] ??
-            memberData['photoURL'] ??
-            memberData['photoUrl'] ??
-            memberData['avatar'] ??
-            '')
-            .toString()
-            .trim();
+            (userData?['photoURL'] ??
+                    userData?['photoUrl'] ??
+                    userData?['avatar'] ??
+                    memberData['photoURL'] ??
+                    memberData['photoUrl'] ??
+                    memberData['avatar'] ??
+                    '')
+                .toString()
+                .trim();
 
         members.add(
           FamilyMember(
@@ -178,82 +177,92 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
     return _members
         .where((m) => m.selected)
         .map(
-          (m) => SelectedTaskMember(
-        id: m.id,
-        name: m.name,
-        avatarUrl: m.imageUrl,
-      ),
-    )
+          (m) =>
+              SelectedTaskMember(id: m.id, name: m.name, avatarUrl: m.imageUrl),
+        )
         .toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: _background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: Container(
-                width: 430,
-                constraints: const BoxConstraints(maxWidth: 430),
-                color: _background,
-                child: Column(
-                  children: [
-                    _buildHeader(context),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 12),
-                            _buildSearchField(),
-                            const SizedBox(height: 18),
-                            const Text(
-                              'FAMILY CIRCLE',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.2,
-                                color: _labelColor,
-                              ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: Container(
+                    width: 430,
+                    constraints: const BoxConstraints(maxWidth: 430),
+                    color: _background,
+                    child: Column(
+                      children: [
+                        _buildHeader(context),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
-                            const SizedBox(height: 12),
-                            if (_isLoading)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 24),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    color: Color(0xFFE2B736),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 12),
+                                _buildSearchField(),
+                                const SizedBox(height: 18),
+                                const Text(
+                                  'FAMILY CIRCLE',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.2,
+                                    color: _labelColor,
                                   ),
                                 ),
-                              )
-                            else
-                              ..._buildMemberList(),
-                            const SizedBox(height: 16),
-                            _buildInviteNewMemberButton(),
-                            const SizedBox(height: 90),
-                          ],
+                                const SizedBox(height: 12),
+                                if (_isLoading)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 24),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        color: Color(0xFFE2B736),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  ..._buildMemberList(),
+                                const SizedBox(height: 16),
+                                _buildInviteNewMemberButton(),
+                                const SizedBox(height: 90),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _buildSaveButton(context),
+                ),
+              ],
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _buildSaveButton(context),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -263,9 +272,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: BoxDecoration(
         color: AppTheme.headerBackground,
-        boxShadow: const [
-          AppTheme.headerShadow,
-        ],
+        boxShadow: const [AppTheme.headerShadow],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -345,19 +352,17 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: const Color(0xFFF4DFC0),
-                  backgroundImage:
-                  member.imageUrl.isNotEmpty
+                  backgroundImage: member.imageUrl.isNotEmpty
                       ? NetworkImage(member.imageUrl)
                       : null,
-                  child:
-                  member.imageUrl.isEmpty
+                  child: member.imageUrl.isEmpty
                       ? Text(
-                    _memberInitials(member.name),
-                    style: const TextStyle(
-                      color: Color(0xFF8A6D2F),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  )
+                          _memberInitials(member.name),
+                          style: const TextStyle(
+                            color: Color(0xFF8A6D2F),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        )
                       : null,
                 ),
                 const SizedBox(width: 12),
@@ -390,8 +395,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                   height: 24,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color:
-                    member.selected
+                    color: member.selected
                         ? const Color(0xFFFDBA3C)
                         : Colors.white,
                     border: Border.all(
@@ -399,8 +403,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
                       width: 1.5,
                     ),
                   ),
-                  child:
-                  member.selected
+                  child: member.selected
                       ? const Icon(Icons.check, size: 16, color: Colors.white)
                       : null,
                 ),
@@ -418,8 +421,7 @@ class _SelectMembersScreenState extends State<SelectMembersScreen> {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder:
-                (_) => FamilyScreen(
+            builder: (_) => FamilyScreen(
               familyId: widget.familyId,
               familyName: widget.familyName,
             ),

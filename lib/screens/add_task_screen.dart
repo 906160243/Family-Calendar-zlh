@@ -73,8 +73,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
     final initialCategory = widget.initialCategory?.trim().toLowerCase();
     final matchedIndex = _categories.indexWhere(
-          (category) =>
-      (category['label'] as String).toLowerCase() == initialCategory,
+      (category) =>
+          (category['label'] as String).toLowerCase() == initialCategory,
     );
     if (matchedIndex >= 0) {
       _selectedCategoryIndex = matchedIndex;
@@ -122,19 +122,21 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
 
     final userData = await _findUserByUid(user.uid);
-    final name = (userData?['fullName'] ??
-        userData?['name'] ??
-        userData?['displayName'] ??
-        user.email ??
-        'Me')
-        .toString()
-        .trim();
-    final avatarUrl = (userData?['photoURL'] ??
-        userData?['photoUrl'] ??
-        userData?['avatar'] ??
-        '')
-        .toString()
-        .trim();
+    final name =
+        (userData?['fullName'] ??
+                userData?['name'] ??
+                userData?['displayName'] ??
+                user.email ??
+                'Me')
+            .toString()
+            .trim();
+    final avatarUrl =
+        (userData?['photoURL'] ??
+                userData?['photoUrl'] ??
+                userData?['avatar'] ??
+                '')
+            .toString()
+            .trim();
 
     final familyId = await _loadCurrentFamilyId(user.uid);
 
@@ -231,20 +233,19 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   String _selectedEventType() {
-    return (_categories[_selectedCategoryIndex]['label'] as String).toLowerCase();
+    return (_categories[_selectedCategoryIndex]['label'] as String)
+        .toLowerCase();
   }
 
   Future<String?> _loadCurrentFamilyId(String uid) async {
-    final userDoc =
-    await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
     final userData = userDoc.data();
 
     if (userData != null) {
-      final directKeys = [
-        'familyId',
-        'currentFamilyId',
-        'selectedFamilyId',
-      ];
+      final directKeys = ['familyId', 'currentFamilyId', 'selectedFamilyId'];
 
       for (final key in directKeys) {
         final value = userData[key];
@@ -376,7 +377,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildParticipantAvatar(SelectedTaskMember member) {
@@ -391,12 +394,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         child: hasImage
             ? null
             : Text(
-          _memberInitials(member.name),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+                _memberInitials(member.name),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
       ),
     );
   }
@@ -413,54 +416,64 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: _background,
-      body: Container(
-        color: _background,
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Center(
-                child: Container(
-                  width: 430,
-                  constraints: const BoxConstraints(maxWidth: 430),
-                  color: _background,
-                  child: Column(
-                    children: [
-                      _buildHeader(context),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 18),
-                              _buildTitleInput(),
-                              const SizedBox(height: 20),
-                              _buildDateTimeCard(),
-                              const SizedBox(height: 20),
-                              _buildNotesSection(),
-                              const SizedBox(height: 20),
-                              _buildParticipantsSection(),
-                              const SizedBox(height: 20),
-                              _buildReminderCard(),
-                              const SizedBox(height: 32),
-                              _buildSaveButton(context),
-                              const SizedBox(height: 36),
-                            ],
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: Container(
+                    width: 430,
+                    constraints: const BoxConstraints(maxWidth: 430),
+                    color: _background,
+                    child: Column(
+                      children: [
+                        _buildHeader(context),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 18),
+                                _buildTitleInput(),
+                                const SizedBox(height: 20),
+                                _buildDateTimeCard(),
+                                const SizedBox(height: 20),
+                                _buildNotesSection(),
+                                const SizedBox(height: 20),
+                                _buildParticipantsSection(),
+                                const SizedBox(height: 20),
+                                _buildReminderCard(),
+                                const SizedBox(height: 32),
+                                _buildSaveButton(context),
+                                const SizedBox(height: 36),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -470,9 +483,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: const BoxDecoration(
         color: AppTheme.headerBackground,
-        boxShadow: [
-          AppTheme.headerShadow,
-        ],
+        boxShadow: [AppTheme.headerShadow],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -658,10 +669,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               border: InputBorder.none,
               counterText: '',
             ),
-            style: const TextStyle(
-              color: Color(0xFF334155),
-              fontSize: 15,
-            ),
+            style: const TextStyle(color: Color(0xFF334155), fontSize: 15),
           ),
         ),
       ],
@@ -714,8 +722,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           )
         else
           Wrap(
-            children:
-            _selectedParticipants.map(_buildParticipantAvatar).toList(),
+            children: _selectedParticipants
+                .map(_buildParticipantAvatar)
+                .toList(),
           ),
       ],
     );
@@ -801,20 +810,17 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         ),
         child: _isSaving
             ? const SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: Colors.black,
-          ),
-        )
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.black,
+                ),
+              )
             : const Text(
-          'Add Task',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+                'Add Task',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
       ),
     );
   }

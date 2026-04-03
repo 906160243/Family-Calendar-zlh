@@ -71,9 +71,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _register() async {
@@ -92,11 +92,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = passwordController.text.trim();
 
     try {
-      final credential =
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       final user = credential.user;
 
@@ -126,9 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const CalendarScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const CalendarScreen()),
       );
     } on FirebaseAuthException catch (e) {
       String message = 'Registration failed. Please try again.';
@@ -140,8 +135,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else if (e.code == 'weak-password') {
         message = 'The password is too weak.';
       } else if (e.code == 'operation-not-allowed') {
-        message =
-        'Email/password sign-in is not enabled in Firebase Console.';
+        message = 'Email/password sign-in is not enabled in Firebase Console.';
       }
 
       _showMessage(message);
@@ -159,9 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _goToLogin() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
   }
 
@@ -261,18 +253,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           height: 80,
           decoration: BoxDecoration(
             color: accentColor.withOpacity(0.2),
-            border: Border.all(
-              color: accentColor.withOpacity(0.1),
-              width: 1,
-            ),
+            border: Border.all(color: accentColor.withOpacity(0.1), width: 1),
             borderRadius: BorderRadius.circular(100),
           ),
           child: const Center(
-            child: Icon(
-              Icons.location_on,
-              size: 40,
-              color: accentColor,
-            ),
+            child: Icon(Icons.location_on, size: 40, color: accentColor),
           ),
         ),
         const SizedBox(height: 16),
@@ -283,7 +268,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             fontWeight: FontWeight.bold,
             color: primaryColor,
             letterSpacing: -0.75,
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
         const SizedBox(height: 8),
@@ -293,7 +277,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: const Color(0xFF7E7664),
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
       ],
@@ -343,7 +326,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: labelColor,
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
         const SizedBox(height: 8),
@@ -360,18 +342,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 hintText: 'Enter your full name',
-                hintStyle: TextStyle(
-                  color: placeholderColor,
-                  fontSize: 16,
-                  fontFamily: 'Plus Jakarta Sans',
-                ),
+                hintStyle: TextStyle(color: placeholderColor, fontSize: 16),
                 border: InputBorder.none,
               ),
-              style: const TextStyle(
-                fontSize: 16,
-                color: primaryColor,
-                fontFamily: 'Plus Jakarta Sans',
-              ),
+              style: const TextStyle(fontSize: 16, color: primaryColor),
             ),
           ),
         ),
@@ -389,7 +363,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: labelColor,
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
         const SizedBox(height: 8),
@@ -408,18 +381,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               autocorrect: false,
               decoration: const InputDecoration(
                 hintText: 'name@example.com',
-                hintStyle: TextStyle(
-                  color: placeholderColor,
-                  fontSize: 16,
-                  fontFamily: 'Plus Jakarta Sans',
-                ),
+                hintStyle: TextStyle(color: placeholderColor, fontSize: 16),
                 border: InputBorder.none,
               ),
-              style: const TextStyle(
-                fontSize: 16,
-                color: primaryColor,
-                fontFamily: 'Plus Jakarta Sans',
-              ),
+              style: const TextStyle(fontSize: 16, color: primaryColor),
             ),
           ),
         ),
@@ -437,7 +402,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: labelColor,
-            fontFamily: 'Plus Jakarta Sans',
           ),
         ),
         const SizedBox(height: 8),
@@ -456,18 +420,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onSubmitted: (_) => _isLoading ? null : _register(),
               decoration: const InputDecoration(
                 hintText: 'Create a secure password',
-                hintStyle: TextStyle(
-                  color: placeholderColor,
-                  fontSize: 16,
-                  fontFamily: 'Plus Jakarta Sans',
-                ),
+                hintStyle: TextStyle(color: placeholderColor, fontSize: 16),
                 border: InputBorder.none,
               ),
-              style: const TextStyle(
-                fontSize: 16,
-                color: primaryColor,
-                fontFamily: 'Plus Jakarta Sans',
-              ),
+              style: const TextStyle(fontSize: 16, color: primaryColor),
             ),
           ),
         ),
@@ -504,24 +460,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Center(
                 child: _isLoading
                     ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
                     : const Text(
-                  'Create Account',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
-                    fontFamily: 'Plus Jakarta Sans',
-                  ),
-                ),
+                        'Create Account',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
               ),
             ),
           ),
@@ -539,7 +495,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: hintColor,
-            fontFamily: 'Plus Jakarta Sans',
           ),
           children: [
             const TextSpan(text: 'Already have an account? '),

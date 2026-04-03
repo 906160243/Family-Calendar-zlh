@@ -154,13 +154,15 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
 
     try {
       if (_isCreatingMode) {
-        final docRef = await FirebaseFirestore.instance.collection('memos').add({
-          'userId': user.uid,
-          'title': effectiveTitle,
-          'body': body,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        final docRef = await FirebaseFirestore.instance
+            .collection('memos')
+            .add({
+              'userId': user.uid,
+              'title': effectiveTitle,
+              'body': body,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
 
         _originalTitle = effectiveTitle;
         _originalBody = body;
@@ -200,11 +202,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
           _showMessage('Memo saved.');
         }
 
-        return _SavedMemo(
-          memoId: docRef.id,
-          title: effectiveTitle,
-          body: body,
-        );
+        return _SavedMemo(memoId: docRef.id, title: effectiveTitle, body: body);
       }
 
       if (_currentMemoId.isEmpty) {
@@ -215,10 +213,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
           .collection('memos')
           .doc(_currentMemoId)
           .update({
-        'title': effectiveTitle,
-        'body': body,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+            'title': effectiveTitle,
+            'body': body,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
 
       _originalTitle = effectiveTitle;
       _originalBody = body;
@@ -290,10 +288,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
   }
 
@@ -305,10 +300,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
     final savedMemo = (_isCreatingMode || (_isEditing && _hasChanges))
         ? await _saveMemo(popAfterCreate: false, showSuccessMessage: false)
         : _SavedMemo(
-      memoId: _currentMemoId,
-      title: _originalTitle,
-      body: _originalBody,
-    );
+            memoId: _currentMemoId,
+            title: _originalTitle,
+            body: _originalBody,
+          );
 
     if (savedMemo == null) {
       return;
@@ -413,8 +408,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
 
     _listeningTarget = _titleFocusNode.hasFocus ? 'title' : 'body';
     _voiceTarget = _listeningTarget;
-    final controller =
-    _listeningTarget == 'title' ? _titleController : _bodyController;
+    final controller = _listeningTarget == 'title'
+        ? _titleController
+        : _bodyController;
     _voiceBaseText = controller.text;
 
     if (_voiceBaseText.isNotEmpty &&
@@ -447,8 +443,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
         final nextText = transcript.isEmpty
             ? _voiceBaseText.trimRight()
             : '$_voiceBaseText$transcript';
-        final targetController =
-        _listeningTarget == 'title' ? _titleController : _bodyController;
+        final targetController = _listeningTarget == 'title'
+            ? _titleController
+            : _bodyController;
 
         targetController.value = TextEditingValue(
           text: nextText,
@@ -540,42 +537,55 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: _background,
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            width: 430,
-            constraints: const BoxConstraints(maxWidth: 430),
-            height: double.infinity,
-            color: _background,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 89),
-                      Expanded(child: _buildContent()),
-                      const SizedBox(height: 188),
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            child: Center(
+              child: Container(
+                width: 430,
+                constraints: const BoxConstraints(maxWidth: 430),
+                height: double.infinity,
+                color: _background,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 89),
+                          Expanded(child: _buildContent()),
+                          const SizedBox(height: 188),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: _buildAppBar(context),
+                    ),
+                    Positioned(
+                      left: 24,
+                      right: 24,
+                      bottom: 20,
+                      child: _buildBottomActions(context),
+                    ),
+                  ],
                 ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: _buildAppBar(context),
-                ),
-                Positioned(
-                  left: 24,
-                  right: 24,
-                  bottom: 20,
-                  child: _buildBottomActions(context),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -592,9 +602,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: BoxDecoration(
         color: AppTheme.headerBackground,
-        boxShadow: const [
-          AppTheme.headerShadow,
-        ],
+        boxShadow: const [AppTheme.headerShadow],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -627,47 +635,44 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
             onTap: _isSaving
                 ? null
                 : () {
-              if (_isCreatingMode) {
-                _saveMemo();
-                return;
-              }
+                    if (_isCreatingMode) {
+                      _saveMemo();
+                      return;
+                    }
 
-              if (!_isEditing) {
-                _startEditing();
-                return;
-              }
+                    if (!_isEditing) {
+                      _startEditing();
+                      return;
+                    }
 
-              if (_hasChanges) {
-                _saveMemo();
-              }
-            },
+                    if (_hasChanges) {
+                      _saveMemo();
+                    }
+                  },
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 6,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
                 color: _accentColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: _isSaving
                   ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: _accentColor,
-                ),
-              )
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: _accentColor,
+                      ),
+                    )
                   : Text(
-                actionLabel,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: _accentColorNew,
-                  letterSpacing: 0.35,
-                ),
-              ),
+                      actionLabel,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: _accentColorNew,
+                        letterSpacing: 0.35,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -813,21 +818,21 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
           child: Center(
             child: _isAnalyzingTask
                 ? const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
                 : Text(
-              _isCreatingMode ? 'Save & Add Task' : 'Add Task',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: Colors.black,
-              ),
-            ),
+                    _isCreatingMode ? 'Save & Add Task' : 'Add Task',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -873,10 +878,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: (_isListening
-                      ? const Color(0xFFF59E0B)
-                      : const Color(0xFFFAC638))
-                      .withValues(alpha: 0.24),
+                  color:
+                      (_isListening
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFFFAC638))
+                          .withValues(alpha: 0.24),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
@@ -963,8 +969,9 @@ class _VoiceBars extends StatelessWidget {
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
-        final normalizedLevel =
-        level.isFinite ? ((level + 2) / 12).clamp(0.15, 1.0) : 0.2;
+        final normalizedLevel = level.isFinite
+            ? ((level + 2) / 12).clamp(0.15, 1.0)
+            : 0.2;
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
