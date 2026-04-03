@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTheme {
   // Colors
   static const Color background = Color(0xFFFCFBF8);
   static const Color cardBackground = Color(0xFFFFFFFF);
   static const Color pageBackground = Color(0xFFF8F7F6);
-  static const Color headerBackground = Color(0xFFFFFFFF);
+  static const Color headerBackground = cardBackground;
   static const Color headline = Color(0xFF0F172A);
   static const Color accent = Color(0xFFFAC638);
   static const Color secondaryAccent = Color(0xFFFDE047);
@@ -82,8 +83,8 @@ class AppTheme {
   );
 
   static const BoxShadow headerShadow = BoxShadow(
-    color: Color.fromRGBO(0, 0, 0, 0.05),
-    blurRadius: 10,
+    color: Color.fromRGBO(15, 23, 42, 0.03),
+    blurRadius: 6,
     offset: Offset(0, 1),
   );
 
@@ -93,15 +94,24 @@ class AppTheme {
     offset: Offset(0, 2),
   );
 
+  static const SystemUiOverlayStyle systemUiOverlayStyle = SystemUiOverlayStyle(
+    statusBarColor: headerBackground,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarColor: headerBackground,
+    systemNavigationBarIconBrightness: Brightness.dark,
+    systemNavigationBarDividerColor: headerBackground,
+  );
+
   // Radius
   static const double borderRadius = 24.0;
   static const double smallBorderRadius = 16.0;
 
   // Spacing
-  static const double headerHeight = 77.0;
+  static const double headerHeight = 68.0;
   static const double bottomNavHeight = 94.0;
   static const double horizontalPadding = 24.0;
-  static const double verticalPadding = 17.0;
+  static const double verticalPadding = 12.0;
 
   // Blur
   static const double blurSigma = 6.0;
@@ -122,9 +132,7 @@ class AppTheme {
         decoration: BoxDecoration(
           color: backButtonBackground,
           borderRadius: BorderRadius.circular(999),
-          boxShadow: const [
-            backButtonShadow,
-          ],
+          boxShadow: const [backButtonShadow],
         ),
         child: const Center(
           child: Icon(

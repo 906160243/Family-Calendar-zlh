@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:calendar/screens/memo_screen.dart';
-import 'package:calendar/screens/select_family_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,11 +7,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../navigation/app_bottom_nav.dart';
 import '../themes/app_theme.dart';
+import '../widgets/app_header.dart';
 import '../widgets/bottom_navigation_bar.dart';
-import 'calendar_screen.dart';
 import 'login_screen.dart';
-import 'voice_memo_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -99,9 +97,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load user info: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load user info: $e')));
     }
   }
 
@@ -109,9 +107,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User not logged in')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('User not logged in')));
         return;
       }
 
@@ -158,9 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
-          .set({
-        'photoURL': downloadUrl,
-      }, SetOptions(merge: true));
+          .set({'photoURL': downloadUrl}, SetOptions(merge: true));
 
       if (!mounted) return;
       setState(() {
@@ -177,98 +173,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isUploadingPhoto = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload avatar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to upload avatar: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: SettingsScreen.bgColor,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Stack(
               children: [
-                _buildHeader(context),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _buildProfileSection(),
-                        _buildSettingsList(),
-                        _buildLogOutButton(context),
-                        const SizedBox(height: 96),
-                      ],
+                Column(
+                  children: [
+                    const AppHeader(title: 'Settings', useBlur: false),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            _buildProfileSection(),
+                            _buildSettingsList(),
+                            _buildLogOutButton(context),
+                            const SizedBox(height: 96),
+                          ],
+                        ),
+                      ),
                     ),
+                  ],
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: AppBottomNavigationBar(
+                    currentIndex: 3,
+                    onItemTapped: (index) {
+                      navigateFromBottomNav(
+                        context,
+                        targetIndex: index,
+                        currentIndex: 3,
+                      );
+                    },
                   ),
                 ),
               ],
             ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: AppBottomNavigationBar(
-                currentIndex: 3,
-                onItemTapped: (index) {
-                  switch (index) {
-                    case 0:
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const MemoScreen()),
-                      );
-                      break;
-                    case 1:
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SelectFamilyScreen(),
-                        ),
-                      );
-                      break;
-                    case 2:
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const CalendarScreen(),
-                        ),
-                      );
-                      break;
-                    case 3:
-                      break;
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      decoration: BoxDecoration(
-        color: AppTheme.headerBackground,
-        boxShadow: [
-          AppTheme.headerShadow,
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          AppTheme.backButton(context),
-          const Text(
-            'Settings',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: SettingsScreen.primaryColor,
-              letterSpacing: -0.5,
-            ),
           ),
-          const SizedBox(width: 40),
         ],
       ),
     );
@@ -298,45 +262,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: ClipOval(
                     child: _isLoading
                         ? const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _photoURL.isNotEmpty
-                            ? Image.network(
-                          _photoURL,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (context, error, stackTrace) {
-                            return const Center(
-                              child: Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.white,
-                              ),
-                            );
-                          },
-                        )
-                            : const Center(
-                          child: Icon(
-                            Icons.person,
-                            size: 60,
-                            color: Colors.white,
+                            fit: StackFit.expand,
+                            children: [
+                              _photoURL.isNotEmpty
+                                  ? Image.network(
+                                      _photoURL,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return const Center(
+                                              child: Icon(
+                                                Icons.person,
+                                                size: 60,
+                                                color: Colors.white,
+                                              ),
+                                            );
+                                          },
+                                    )
+                                  : const Center(
+                                      child: Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                              if (_isUploadingPhoto)
+                                Container(
+                                  color: Colors.black26,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                        ),
-                        if (_isUploadingPhoto)
-                          Container(
-                            color: Colors.black26,
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
                   ),
                 ),
               ),
@@ -348,10 +312,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   decoration: BoxDecoration(
                     color: SettingsScreen.accentColor,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: SettingsScreen.bgColor,
-                      width: 4,
-                    ),
+                    border: Border.all(color: SettingsScreen.bgColor, width: 4),
                   ),
                   child: const Center(
                     child: Icon(Icons.edit, size: 14, color: Colors.white),
@@ -448,11 +409,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.logout,
-                size: 18,
-                color: Color(0xFF475569),
-              ),
+              Icon(Icons.logout, size: 18, color: Color(0xFF475569)),
               SizedBox(width: 8),
               Text(
                 'Log Out',
@@ -482,11 +439,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               borderRadius: BorderRadius.circular(48),
             ),
             child: Center(
-              child: Icon(
-                icon,
-                size: 16,
-                color: SettingsScreen.accentColor,
-              ),
+              child: Icon(icon, size: 16, color: SettingsScreen.accentColor),
             ),
           ),
           const SizedBox(width: 16),

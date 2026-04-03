@@ -4,14 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../navigation/app_bottom_nav.dart';
 import '../themes/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_navigation_bar.dart';
-import 'calendar_screen.dart';
 import 'create_family_dialog.dart';
 import 'family_screen.dart';
-import 'memo_screen.dart';
-import 'settings_screen.dart';
 
 // Remote avatars (expires after ~7 days from Figma export)
 const _avatar1 =
@@ -78,8 +76,9 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
     final userDoc = await firestore.collection('users').doc(memberId).get();
     if (userDoc.exists) {
       final userData = userDoc.data() ?? {};
-      final photoURL =
-      (userData['photoURL'] ?? userData['avatar'] ?? '').toString().trim();
+      final photoURL = (userData['photoURL'] ?? userData['avatar'] ?? '')
+          .toString()
+          .trim();
       if (photoURL.isNotEmpty) {
         return photoURL;
       }
@@ -93,8 +92,9 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
         .get();
 
     if (familyMemberDoc.exists) {
-      final String photoURL =
-      (familyMemberDoc.data()?['photoURL'] ?? '').toString().trim();
+      final String photoURL = (familyMemberDoc.data()?['photoURL'] ?? '')
+          .toString()
+          .trim();
       if (photoURL.isNotEmpty) {
         return photoURL;
       }
@@ -128,15 +128,18 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
     for (int i = 0; i < membershipSnapshot.docs.length; i++) {
       final membershipData = membershipSnapshot.docs[i].data();
 
-      final String familyId =
-      (membershipData['familyId'] ?? '').toString().trim();
+      final String familyId = (membershipData['familyId'] ?? '')
+          .toString()
+          .trim();
 
       if (familyId.isEmpty) {
         continue;
       }
 
-      final familyDoc =
-      await firestore.collection('families').doc(familyId).get();
+      final familyDoc = await firestore
+          .collection('families')
+          .doc(familyId)
+          .get();
 
       if (!familyDoc.exists) {
         continue;
@@ -155,8 +158,9 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
       for (int j = 0; j < membersSnapshot.docs.length; j++) {
         final memberDoc = membersSnapshot.docs[j];
 
-        String? photoUrl =
-        (memberDoc.data()['photoURL'] ?? '').toString().trim();
+        String? photoUrl = (memberDoc.data()['photoURL'] ?? '')
+            .toString()
+            .trim();
 
         if (photoUrl.isEmpty) {
           final loadedAvatar = await _loadMemberAvatar(memberDoc.id);
@@ -184,10 +188,11 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
       result.add(
         _FamilyGroup(
           id: familyId,
-          name: (familyData['familyName'] ??
-              membershipData['familyName'] ??
-              'Unnamed Family')
-              .toString(),
+          name:
+              (familyData['familyName'] ??
+                      membershipData['familyName'] ??
+                      'Unnamed Family')
+                  .toString(),
           memberCount: memberCount,
           avatars: avatars,
           extraCount: extraCount,
@@ -200,54 +205,69 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaPadding = MediaQuery.of(context).padding;
+    final statusBarHeight = mediaPadding.top;
+    final bottomInset = mediaPadding.bottom;
+    final actionBottomOffset = bottomInset + 102;
+    final listBottomSpacing = bottomInset + 164;
+
     return Scaffold(
       backgroundColor: AppTheme.pageBackground,
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            width: 430,
-            constraints: const BoxConstraints(maxWidth: 430),
-            height: double.infinity,
-            color: AppTheme.pageBackground,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 77),
-                      Expanded(child: _buildList()),
-                      const SizedBox(height: 156),
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Center(
+              child: Container(
+                width: 430,
+                constraints: const BoxConstraints(maxWidth: 430),
+                height: double.infinity,
+                color: AppTheme.pageBackground,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 77),
+                          Expanded(child: _buildList()),
+                          SizedBox(height: listBottomSpacing),
+                        ],
+                      ),
+                    ),
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: AppHeader(title: 'Select Family', useBlur: false),
+                    ),
+                    Positioned(
+                      left: 24,
+                      right: 24,
+                      bottom: actionBottomOffset,
+                      child: _buildCreateFamilyButton(),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: AppBottomNavigationBar(
+                        currentIndex: _selectedNavIndex,
+                        onItemTapped: _onNavItemTapped,
+                      ),
+                    ),
+                  ],
                 ),
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: AppHeader(
-                    title: 'Select Family',
-                    useBlur: false,
-                  ),
-                ),
-                Positioned(
-                  left: 24,
-                  right: 24,
-                  bottom: 94,
-                  child: _buildCreateFamilyButton(),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: AppBottomNavigationBar(
-                    currentIndex: _selectedNavIndex,
-                    onItemTapped: _onNavItemTapped,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -358,28 +378,28 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
               children: groups
                   .map(
                     (group) => Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: _FamilyGroupCard(
-                    group: group,
-                    onTap: () {
-                      Navigator.of(context)
-                          .push(
-                        MaterialPageRoute(
-                          builder: (_) => FamilyScreen(
-                            familyId: group.id,
-                            familyName: group.name,
-                          ),
-                        ),
-                      )
-                          .then((result) {
-                        if (result == true) {
-                          _refreshFamilies();
-                        }
-                      });
-                    },
-                  ),
-                ),
-              )
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: _FamilyGroupCard(
+                        group: group,
+                        onTap: () {
+                          Navigator.of(context)
+                              .push(
+                                MaterialPageRoute(
+                                  builder: (_) => FamilyScreen(
+                                    familyId: group.id,
+                                    familyName: group.name,
+                                  ),
+                                ),
+                              )
+                              .then((result) {
+                                if (result == true) {
+                                  _refreshFamilies();
+                                }
+                              });
+                        },
+                      ),
+                    ),
+                  )
                   .toList(growable: false),
             ),
           ),
@@ -455,29 +475,11 @@ class _SelectFamilyScreenState extends State<SelectFamilyScreen> {
   }
 
   void _onNavItemTapped(int index) {
-    setState(() {
-      _selectedNavIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const MemoScreen()),
-        );
-        break;
-      case 1:
-        break;
-      case 2:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CalendarScreen()),
-        );
-        break;
-      case 3:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-        );
-        break;
-    }
+    navigateFromBottomNav(
+      context,
+      targetIndex: index,
+      currentIndex: _selectedNavIndex,
+    );
   }
 }
 
@@ -501,11 +503,8 @@ class _FamilyGroupCard extends StatelessWidget {
   final _FamilyGroup group;
   final VoidCallback? onTap;
 
-  const _FamilyGroupCard({
-    Key? key,
-    required this.group,
-    this.onTap,
-  }) : super(key: key);
+  const _FamilyGroupCard({Key? key, required this.group, this.onTap})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -529,10 +528,7 @@ class _FamilyGroupCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              group.name,
-              style: AppTheme.familyNameStyle,
-            ),
+            Text(group.name, style: AppTheme.familyNameStyle),
             const SizedBox(height: 4),
             Text(
               '${group.memberCount} family members',

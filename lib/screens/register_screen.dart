@@ -21,7 +21,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   static const labelColor = Color(0xFF1E293B);
   static const hintColor = Color(0xFF64748B);
   static const placeholderColor = Color(0xFF94A3B8);
-  static const borderColor = Color(0xFFE2E8F0);
   static const fieldBackgroundColor = bgColor;
   static const fieldBorderColor = Color(0xFFDDE2E7);
 
@@ -257,11 +256,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset(
-          'assets/images/family_memo_logo.png',
-          width: 220,
-          height: 220,
-          fit: BoxFit.contain,
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: accentColor.withOpacity(0.2),
+            border: Border.all(
+              color: accentColor.withOpacity(0.1),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.location_on,
+              size: 40,
+              color: accentColor,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Cottage',
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+            letterSpacing: -0.75,
+            fontFamily: 'Plus Jakarta Sans',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Your family\'s shared space',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF7E7664),
+            fontFamily: 'Plus Jakarta Sans',
+          ),
         ),
       ],
     );

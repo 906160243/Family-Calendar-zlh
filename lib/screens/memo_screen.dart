@@ -1,15 +1,13 @@
-import 'package:calendar/screens/calendar_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../navigation/app_bottom_nav.dart';
 import '../themes/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_navigation_bar.dart';
 import 'memo_detail_screen.dart';
-import 'select_family_screen.dart';
-import 'settings_screen.dart';
 
 class MemoScreen extends StatefulWidget {
   const MemoScreen({super.key});
@@ -38,10 +36,10 @@ class _MemoScreenState extends State<MemoScreen> {
         .where('userId', isEqualTo: user.uid)
         .snapshots()
         .map((snapshot) {
-      final memos = snapshot.docs.map(MemoRecord.fromFirestore).toList();
-      memos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return memos;
-    });
+          final memos = snapshot.docs.map(MemoRecord.fromFirestore).toList();
+          memos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return memos;
+        });
   }
 
   List<_MemoSection> _buildSections(List<MemoRecord> memos) {
@@ -114,80 +112,80 @@ class _MemoScreenState extends State<MemoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaPadding = MediaQuery.of(context).padding;
+    final statusBarHeight = mediaPadding.top;
+    final bottomInset = mediaPadding.bottom;
+    final fabBottomOffset = bottomInset + 112;
+    final contentBottomSpacing = bottomInset + 94;
+
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            width: 430,
-            constraints: const BoxConstraints(maxWidth: 430),
-            height: double.infinity,
-            color: bgColor,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 74),
-                      Expanded(child: _buildContent()),
-                      const SizedBox(height: 86),
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Center(
+              child: Container(
+                width: 430,
+                constraints: const BoxConstraints(maxWidth: 430),
+                height: double.infinity,
+                color: bgColor,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 74),
+                          Expanded(child: _buildContent()),
+                          SizedBox(height: contentBottomSpacing),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: _buildHeader(),
+                    ),
+                    Positioned(
+                      right: 24,
+                      bottom: fabBottomOffset,
+                      child: _buildFab(),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: AppBottomNavigationBar(
+                        currentIndex: _selectedNavIndex,
+                        onItemTapped: (index) {
+                          navigateFromBottomNav(
+                            context,
+                            targetIndex: index,
+                            currentIndex: _selectedNavIndex,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                Positioned(top: 0, left: 0, right: 0, child: _buildHeader()),
-                Positioned(right: 24, bottom: 104, child: _buildFab()),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: AppBottomNavigationBar(
-                    currentIndex: _selectedNavIndex,
-                    onItemTapped: (index) {
-                      setState(() {
-                        _selectedNavIndex = index;
-                      });
-
-                      switch (index) {
-                        case 0:
-                          break;
-                        case 1:
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const SelectFamilyScreen(),
-                            ),
-                          );
-                          break;
-                        case 2:
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const CalendarScreen(),
-                            ),
-                          );
-                          break;
-                        case 3:
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const SettingsScreen(),
-                            ),
-                          );
-                          break;
-                      }
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return const AppHeader(
-      title: 'Memos',
-      useBlur: false,
-    );
+    return const AppHeader(title: 'Memos', useBlur: false);
   }
 
   Widget _buildContent() {
@@ -288,7 +286,7 @@ class _MemoScreenState extends State<MemoScreen> {
         ),
         const SizedBox(height: 16),
         ...section.items.map(
-              (item) => Padding(
+          (item) => Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: _MemoCard(
               item: item,
@@ -377,8 +375,8 @@ class MemoRecord {
   }
 
   factory MemoRecord.fromFirestore(
-      QueryDocumentSnapshot<Map<String, dynamic>> doc,
-      ) {
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final data = doc.data();
     final timestamp = data['createdAt'];
 

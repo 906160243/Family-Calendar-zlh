@@ -2,15 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../navigation/app_bottom_nav.dart';
 import '../themes/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_navigation_bar.dart';
-import 'invitation_screen.dart';
-import 'chat_screen.dart';
-import 'chat_list_screen.dart';
-import 'settings_screen.dart';
-import 'calendar_screen.dart';
-import 'memo_screen.dart';
 
 class FamilyScreen extends StatefulWidget {
   final String familyId;
@@ -104,8 +99,8 @@ class _FamilyScreenState extends State<FamilyScreen> {
   }
 
   Future<QueryDocumentSnapshot<Map<String, dynamic>>?> _findUserDocByEmail(
-      String email,
-      ) async {
+    String email,
+  ) async {
     final firestore = FirebaseFirestore.instance;
     final normalizedEmail = email.trim().toLowerCase();
 
@@ -148,8 +143,8 @@ class _FamilyScreenState extends State<FamilyScreen> {
       }
 
       final familyData = familyDoc.data() ?? {};
-      final familyName =
-      (familyData['familyName'] ?? widget.familyName).toString();
+      final familyName = (familyData['familyName'] ?? widget.familyName)
+          .toString();
       final familyPhotoURL = (familyData['photoURL'] ?? '').toString();
 
       final invitedUserDoc = await _findUserDocByEmail(inputEmail);
@@ -161,15 +156,18 @@ class _FamilyScreenState extends State<FamilyScreen> {
       final invitedUid = invitedUserDoc.id;
       final invitedUserData = invitedUserDoc.data();
 
-      final nickname = (invitedUserData['fullName'] ??
-          invitedUserData['name'] ??
-          invitedUserData['displayName'] ??
-          invitedUserData['nickname'] ??
-          inputEmail)
-          .toString();
+      final nickname =
+          (invitedUserData['fullName'] ??
+                  invitedUserData['name'] ??
+                  invitedUserData['displayName'] ??
+                  invitedUserData['nickname'] ??
+                  inputEmail)
+              .toString();
 
-      final existingMemberDoc =
-      await familyRef.collection('members').doc(invitedUid).get();
+      final existingMemberDoc = await familyRef
+          .collection('members')
+          .doc(invitedUid)
+          .get();
 
       if (existingMemberDoc.exists) {
         throw Exception('This user is already in the family');
@@ -197,17 +195,14 @@ class _FamilyScreenState extends State<FamilyScreen> {
         'role': 'member',
       });
 
-      batch.set(
-        familyRef.collection('members').doc(invitedUid),
-        {
-          'uid': invitedUid,
-          'nickname': nickname,
-          'role': 'member',
-          'familyRole': 'member',
-          'status': 'active',
-          'joinedAt': now,
-        },
-      );
+      batch.set(familyRef.collection('members').doc(invitedUid), {
+        'uid': invitedUid,
+        'nickname': nickname,
+        'role': 'member',
+        'familyRole': 'member',
+        'status': 'active',
+        'joinedAt': now,
+      });
 
       await batch.commit();
 
@@ -221,11 +216,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) {
@@ -288,11 +279,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) {
@@ -349,11 +336,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) {
@@ -406,9 +389,9 @@ class _FamilyScreenState extends State<FamilyScreen> {
       await batch.commit();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You left the family')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('You left the family')));
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           Navigator.of(context).pop(true);
@@ -417,11 +400,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) {
@@ -443,7 +422,10 @@ class _FamilyScreenState extends State<FamilyScreen> {
       barrierDismissible: true,
       builder: (dialogContext) {
         return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 22,
+            vertical: 24,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -575,9 +557,9 @@ class _FamilyScreenState extends State<FamilyScreen> {
       final memberData = doc.data();
 
       final String userId =
-      (memberData['uid'] ?? memberData['userId'] ?? doc.id)
-          .toString()
-          .trim();
+          (memberData['uid'] ?? memberData['userId'] ?? doc.id)
+              .toString()
+              .trim();
 
       if (userId.isEmpty) {
         continue;
@@ -587,25 +569,27 @@ class _FamilyScreenState extends State<FamilyScreen> {
 
       final String role = (memberData['role'] ?? 'member').toString().trim();
 
-      final String fullName = (userData?['fullName'] ??
-          userData?['name'] ??
-          userData?['displayName'] ??
-          memberData['nickname'] ??
-          memberData['fullName'] ??
-          memberData['name'] ??
-          memberData['displayName'] ??
-          'Unknown Member')
-          .toString();
+      final String fullName =
+          (userData?['fullName'] ??
+                  userData?['name'] ??
+                  userData?['displayName'] ??
+                  memberData['nickname'] ??
+                  memberData['fullName'] ??
+                  memberData['name'] ??
+                  memberData['displayName'] ??
+                  'Unknown Member')
+              .toString();
 
-      final String photoURL = (userData?['photoURL'] ??
-          userData?['photoUrl'] ??
-          userData?['avatar'] ??
-          memberData['photoURL'] ??
-          memberData['photoUrl'] ??
-          memberData['avatar'] ??
-          '')
-          .toString()
-          .trim();
+      final String photoURL =
+          (userData?['photoURL'] ??
+                  userData?['photoUrl'] ??
+                  userData?['avatar'] ??
+                  memberData['photoURL'] ??
+                  memberData['photoUrl'] ??
+                  memberData['avatar'] ??
+                  '')
+              .toString()
+              .trim();
 
       members.add({
         'userId': userId,
@@ -621,50 +605,66 @@ class _FamilyScreenState extends State<FamilyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: AppTheme.pageBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            AppHeader(
-              title: widget.familyName.isEmpty ? 'Family Member' : widget.familyName,
-              leading: AppTheme.backButton(context),
-              useBlur: false,
-            ),
-            Expanded(
-              child: Container(
-                color: AppTheme.pageBackground,
-                child: RefreshIndicator(
-                  onRefresh: _refreshMembers,
-                  color: AppTheme.accent,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 20,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildInviteSection(),
-                          const SizedBox(height: 40),
-                          _buildCommunicationSection(context),
-                          const SizedBox(height: 40),
-                          _buildExistingFamilySection(),
-                        ],
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppTheme.headerBackground),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                AppHeader(
+                  title: widget.familyName.isEmpty
+                      ? 'Family Member'
+                      : widget.familyName,
+                  leading: AppTheme.backButton(context),
+                  useBlur: false,
+                ),
+                Expanded(
+                  child: Container(
+                    color: AppTheme.pageBackground,
+                    child: RefreshIndicator(
+                      onRefresh: _refreshMembers,
+                      color: AppTheme.accent,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 20,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInviteSection(),
+                              const SizedBox(height: 40),
+                              _buildCommunicationSection(context),
+                              const SizedBox(height: 40),
+                              _buildExistingFamilySection(),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                AppBottomNavigationBar(
+                  currentIndex: _selectedNavIndex,
+                  onItemTapped: _onNavItemTapped,
+                ),
+              ],
             ),
-            AppBottomNavigationBar(
-              currentIndex: _selectedNavIndex,
-              onItemTapped: _onNavItemTapped,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -686,8 +686,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
             ),
             const SizedBox(height: 12),
             Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
               decoration: BoxDecoration(
                 color: AppTheme.lightBackground,
                 borderRadius: BorderRadius.circular(24),
@@ -724,8 +723,8 @@ class _FamilyScreenState extends State<FamilyScreen> {
                     onTap: _isInviting
                         ? null
                         : () {
-                      _inviteEmailController.clear();
-                    },
+                            _inviteEmailController.clear();
+                          },
                     child: const Icon(
                       Icons.clear,
                       size: 24,
@@ -823,8 +822,10 @@ class _FamilyScreenState extends State<FamilyScreen> {
             padding: const EdgeInsets.all(21),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.6),
-              border:
-              Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.4),
+                width: 1,
+              ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -979,34 +980,34 @@ class _FamilyScreenState extends State<FamilyScreen> {
                 ),
               )
             else if (members.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: AppTheme.lightBackground),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Text(
-                    'No family members found.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.headline,
-                    ),
-                  ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: members.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final member = members[index];
-                    return _buildFamilyMemberCard(member);
-                  },
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: AppTheme.lightBackground),
+                  borderRadius: BorderRadius.circular(24),
                 ),
+                child: const Text(
+                  'No family members found.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.headline,
+                  ),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: members.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final member = members[index];
+                  return _buildFamilyMemberCard(member);
+                },
+              ),
           ],
         );
       },
@@ -1046,25 +1047,21 @@ class _FamilyScreenState extends State<FamilyScreen> {
             child: ClipOval(
               child: photoURL.isNotEmpty
                   ? Image.network(
-                photoURL,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) {
-                  return const Center(
-                    child: Icon(
-                      Icons.person,
-                      size: 32,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
-              )
+                      photoURL,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) {
+                        return const Center(
+                          child: Icon(
+                            Icons.person,
+                            size: 32,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
+                    )
                   : const Center(
-                child: Icon(
-                  Icons.person,
-                  size: 32,
-                  color: Colors.grey,
-                ),
-              ),
+                      child: Icon(Icons.person, size: 32, color: Colors.grey),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -1129,10 +1126,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
 
     if (member['badge'] != null) {
       return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 4,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: AppTheme.accent.withOpacity(0.1),
           borderRadius: BorderRadius.circular(999),
@@ -1159,10 +1153,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: AppTheme.accent.withOpacity(onTap == null ? 0.05 : 0.12),
           borderRadius: BorderRadius.circular(999),
@@ -1183,28 +1174,10 @@ class _FamilyScreenState extends State<FamilyScreen> {
   }
 
   void _onNavItemTapped(int index) {
-    setState(() {
-      _selectedNavIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const MemoScreen()),
-        );
-        break;
-      case 1:
-        break;
-      case 2:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CalendarScreen()),
-        );
-        break;
-      case 3:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-        );
-        break;
-    }
+    navigateFromBottomNav(
+      context,
+      targetIndex: index,
+      currentIndex: _selectedNavIndex,
+    );
   }
 }

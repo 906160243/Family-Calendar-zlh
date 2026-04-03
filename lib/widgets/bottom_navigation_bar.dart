@@ -25,6 +25,10 @@ class AppBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final topPadding = bottomInset > 0 ? 6.0 : 8.0;
+    final bottomPadding = bottomInset > 0 ? bottomInset : 4.0;
+
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(
@@ -32,21 +36,16 @@ class AppBottomNavigationBar extends StatelessWidget {
           sigmaY: AppTheme.blurSigma,
         ),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 25,
-            vertical: AppTheme.verticalPadding,
-          ),
+          padding: EdgeInsets.fromLTRB(25, topPadding, 25, bottomPadding),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: const Border(
-              top: BorderSide(color: AppTheme.divider),
-            ),
+            border: const Border(top: BorderSide(color: AppTheme.divider)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(
               _navItems.length,
-                  (index) => _buildNavItem(index),
+              (index) => _buildNavItem(index),
             ),
           ),
         ),
@@ -58,24 +57,44 @@ class AppBottomNavigationBar extends StatelessWidget {
     final item = _navItems[index];
     final isSelected = index == currentIndex;
 
-    return GestureDetector(
-      onTap: () => onItemTapped(index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            item.icon,
-            size: 20,
-            color: isSelected ? AppTheme.accent : AppTheme.inactiveIcon,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => onItemTapped(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.accent.withOpacity(0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
           ),
-          const SizedBox(height: 4),
-          Text(
-            item.label,
-            style: isSelected
-                ? AppTheme.navLabelSelectedStyle
-                : AppTheme.navLabelStyle,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedScale(
+                scale: isSelected ? 1.08 : 1,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                child: Icon(
+                  item.icon,
+                  size: 24,
+                  color: isSelected ? AppTheme.accent : AppTheme.inactiveIcon,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.label,
+                style: isSelected
+                    ? AppTheme.navLabelSelectedStyle
+                    : AppTheme.navLabelStyle,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -85,8 +104,5 @@ class _NavItem {
   final IconData icon;
   final String label;
 
-  const _NavItem({
-    required this.icon,
-    required this.label,
-  });
+  const _NavItem({required this.icon, required this.label});
 }
