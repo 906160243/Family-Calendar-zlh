@@ -246,7 +246,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
     if (taskId == null || taskId.isEmpty) {
       if (!mounted) return;
-      _showMessage('Task ID not found.');
+      _showMessage('Task not found');
       return;
     }
 
@@ -279,7 +279,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       return;
     } catch (e) {
       if (!mounted) return;
-      _showMessage('Failed to update task: $e');
+      _showMessage('Failed to update task, it may have been deleted');
     } finally {
       if (mounted) {
         setState(() {
@@ -301,7 +301,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
     if (taskId == null || taskId.isEmpty) {
       if (!mounted) return;
-      _showMessage('Task ID not found.');
+      _showMessage('Task not found.');
       return;
     }
 
@@ -321,7 +321,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       return;
     } catch (e) {
       if (!mounted) return;
-      _showMessage('Failed to delete task: $e');
+      _showMessage('The task update failed, it may have been deleted!');
     } finally {
       if (mounted) {
         setState(() {
