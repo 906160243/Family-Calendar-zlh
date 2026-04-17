@@ -30,7 +30,8 @@ class MemoDetailScreen extends StatefulWidget {
 
 class _MemoDetailScreenState extends State<MemoDetailScreen>
     with SingleTickerProviderStateMixin {
-  static const int _maxTitleLength = 20;
+  static const int _maxTitleLength = 30;
+  static const int _generatedTitleLength = 20;
   static const _background = AppTheme.pageBackground;
   static const _primaryColor = Color(0xFF0F172A);
   static const _accentColor = Color(0xFFFAC638);
@@ -361,10 +362,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
     }
 
     final firstLine = trimmedBody.split('\n').first.trim();
-    if (firstLine.length <= 28) {
+    if (firstLine.length <= _generatedTitleLength) {
       return firstLine;
     }
-    return '${firstLine.substring(0, 28).trimRight()}...';
+    return firstLine.substring(0, _generatedTitleLength).trimRight();
   }
 
   void _showMessage(String message) {
@@ -879,15 +880,15 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
 
   double _detailViewportHeight(double availableHeight) {
     final reservedHeight = (_isListening || _isVoiceTransitioning)
-        ? 280.0
-        : 228.0;
+        ? 232.0
+        : 180.0;
     final calculatedHeight = availableHeight - reservedHeight;
 
-    if (calculatedHeight < 180) {
-      return 180;
+    if (calculatedHeight < 210) {
+      return 210;
     }
-    if (calculatedHeight > 360) {
-      return 360;
+    if (calculatedHeight > 440) {
+      return 440;
     }
     return calculatedHeight;
   }
@@ -932,7 +933,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
               minLines: null,
               maxLines: null,
               expands: true,
-              scrollPadding: const EdgeInsets.only(bottom: 220),
+              scrollPadding: const EdgeInsets.only(bottom: 168),
               decoration: const InputDecoration(
                 hintText: 'Write your memo here...',
                 border: InputBorder.none,
