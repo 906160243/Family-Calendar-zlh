@@ -36,8 +36,23 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
   static const _primaryColor = Color(0xFF0F172A);
   static const _accentColor = Color(0xFFFAC638);
   static const _accentColorNew = Color(0xFFE2B736);
+  static const _editingColor = Color(0xFF9A6B00);
   static const _cardBorder = Color.fromRGBO(250, 198, 56, 0.05);
   static const _bodyText = Color(0xFF334155);
+  static const _titleStyle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    color: _primaryColor,
+    height: 1.4,
+  );
+  static const _bodyStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    color: _bodyText,
+    height: 1.6,
+  );
+  static const double _minDetailBodyHeight = 112;
+  static const double _maxDetailBodyHeight = 440;
 
   late final TextEditingController _titleController;
   late final TextEditingController _bodyController;
@@ -161,7 +176,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
     _stopVoiceBars();
   }
 
-  void _scheduleBodyScrollToLatest() {
+  void _scheduleBodyScrollToLatest({bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_bodyScrollController.hasClients) {
         return;
@@ -172,11 +187,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
           !selection.isValid ||
           selection.extentOffset >= _bodyController.text.length - 1;
 
-      if (!_isListening && !_bodyFocusNode.hasFocus) {
+      if (!force && !_isListening && !_bodyFocusNode.hasFocus) {
         return;
       }
 
-      if (!caretNearEnd) {
+      if (!force && !caretNearEnd) {
         return;
       }
 
@@ -339,8 +354,24 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
   }
 
   void _startEditing() {
+    _bodyController.selection = TextSelection.collapsed(
+      offset: _bodyController.text.length,
+    );
     setState(() {
       _isEditing = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _bodyFocusNode.requestFocus();
+      _scheduleBodyScrollToLatest(force: true);
+      Future<void>.delayed(const Duration(milliseconds: 260), () {
+        if (!mounted) {
+          return;
+        }
+        _scheduleBodyScrollToLatest(force: true);
+      });
     });
   }
 
@@ -348,6 +379,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
     _voiceSessionId++;
     _speech.cancel();
     _resetVoiceUiState();
+    FocusScope.of(context).unfocus();
     _titleController.text = _originalTitle;
     _bodyController.text = _originalBody;
     setState(() {
@@ -699,6 +731,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
 
     return Scaffold(
       backgroundColor: _background,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned(
@@ -751,8 +784,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
     final actionLabel = _isCreatingMode
         ? 'Save'
         : _isEditing
-        ? (_hasChanges ? 'Save' : 'Edit')
+        ? (_hasChanges ? 'Save' : 'Cancel')
         : 'Edit';
+    final actionVisuals = _resolveActionVisuals();
 
     return Container(
       height: 89,
@@ -804,13 +838,19 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
 
                     if (_hasChanges) {
                       _saveMemo();
+                      return;
                     }
+
+                    _cancelEditing();
                   },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: actionVisuals.padding,
               decoration: BoxDecoration(
-                color: _accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(999),
+                color: actionVisuals.backgroundColor,
+                borderRadius: BorderRadius.circular(actionVisuals.borderRadius),
+                border: actionVisuals.borderColor == null
+                    ? null
+                    : Border.all(color: actionVisuals.borderColor!),
               ),
               child: _isSaving
                   ? const SizedBox(
@@ -823,10 +863,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
                     )
                   : Text(
                       actionLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: _accentColorNew,
+                        color: actionVisuals.textColor,
                         letterSpacing: 0.35,
                       ),
                     ),
@@ -842,13 +882,19 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final detailViewportHeight = _detailViewportHeight(
-          constraints.maxHeight,
+        final viewportConfig = _detailViewportConfig(
+          availableHeight: constraints.maxHeight,
+          keyboardInset: keyboardInset,
         );
 
         return SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
-          padding: EdgeInsets.fromLTRB(24, 0, 24, 188 + keyboardInset),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            0,
+            24,
+            viewportConfig.scrollBottomPadding,
+          ),
           child: Column(
             children: [
               const SizedBox(height: 39),
@@ -867,9 +913,21 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
                   ],
                 ),
                 padding: const EdgeInsets.fromLTRB(25, 21, 25, 25),
-                child: _isEditing
-                    ? _buildEditableBody(detailViewportHeight)
-                    : _buildReadOnlyBody(detailViewportHeight),
+                child: LayoutBuilder(
+                  builder: (context, cardConstraints) {
+                    return _isEditing
+                        ? _buildEditableBody(
+                            context,
+                            maxBodyHeight: viewportConfig.maxBodyHeight,
+                            contentWidth: cardConstraints.maxWidth,
+                          )
+                        : _buildReadOnlyBody(
+                            context,
+                            maxBodyHeight: viewportConfig.maxBodyHeight,
+                            contentWidth: cardConstraints.maxWidth,
+                          );
+                  },
+                ),
               ),
             ],
           ),
@@ -878,22 +936,69 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
     );
   }
 
-  double _detailViewportHeight(double availableHeight) {
-    final reservedHeight = (_isListening || _isVoiceTransitioning)
-        ? 232.0
-        : 180.0;
-    final calculatedHeight = availableHeight - reservedHeight;
+  _DetailViewportConfig _detailViewportConfig({
+    required double availableHeight,
+    required double keyboardInset,
+  }) {
+    final scrollBottomPadding = math.max(
+      _bottomActionsReservedHeight(),
+      keyboardInset + 32,
+    );
+    final calculatedHeight = availableHeight - scrollBottomPadding - 132;
 
-    if (calculatedHeight < 210) {
-      return 210;
-    }
-    if (calculatedHeight > 440) {
-      return 440;
-    }
-    return calculatedHeight;
+    return _DetailViewportConfig(
+      maxBodyHeight: calculatedHeight
+          .clamp(_minDetailBodyHeight, _maxDetailBodyHeight)
+          .toDouble(),
+      scrollBottomPadding: scrollBottomPadding,
+    );
   }
 
-  Widget _buildEditableBody(double detailViewportHeight) {
+  double _bottomActionsReservedHeight() {
+    return (_isListening || _isVoiceTransitioning) ? 244 : 188;
+  }
+
+  double _resolveDetailBodyHeight(
+    BuildContext context, {
+    required String text,
+    required String placeholder,
+    required double maxBodyHeight,
+    required double contentWidth,
+  }) {
+    final usableWidth = math.max(0.0, contentWidth - 6);
+    if (usableWidth == 0) {
+      return _minDetailBodyHeight;
+    }
+
+    final sampleText = text.isEmpty ? placeholder : text;
+    final normalizedText = sampleText.endsWith('\n')
+        ? '$sampleText '
+        : sampleText;
+    final painter = TextPainter(
+      text: TextSpan(text: normalizedText, style: _bodyStyle),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: null,
+    )..layout(maxWidth: usableWidth);
+
+    return (painter.height + 14)
+        .clamp(_minDetailBodyHeight, maxBodyHeight)
+        .toDouble();
+  }
+
+  Widget _buildEditableBody(
+    BuildContext context, {
+    required double maxBodyHeight,
+    required double contentWidth,
+  }) {
+    final bodyHeight = _resolveDetailBodyHeight(
+      context,
+      text: _bodyController.text,
+      placeholder: 'Write your memo here...',
+      maxBodyHeight: maxBodyHeight,
+      contentWidth: contentWidth,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -910,16 +1015,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
             isCollapsed: true,
             counterText: '',
           ),
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: _primaryColor,
-            height: 1.4,
-          ),
+          style: _titleStyle,
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: detailViewportHeight,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          height: bodyHeight,
           child: Scrollbar(
             controller: _bodyScrollController,
             thumbVisibility: true,
@@ -933,18 +1035,19 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
               minLines: null,
               maxLines: null,
               expands: true,
-              scrollPadding: const EdgeInsets.only(bottom: 168),
+              textAlignVertical: TextAlignVertical.top,
+              scrollPadding: EdgeInsets.only(
+                bottom: math.max(
+                  32,
+                  MediaQuery.viewInsetsOf(context).bottom + 16,
+                ),
+              ),
               decoration: const InputDecoration(
                 hintText: 'Write your memo here...',
                 border: InputBorder.none,
                 isCollapsed: true,
               ),
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: _bodyText,
-                height: 1.6,
-              ),
+              style: _bodyStyle,
             ),
           ),
         ),
@@ -952,22 +1055,28 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
     );
   }
 
-  Widget _buildReadOnlyBody(double detailViewportHeight) {
+  Widget _buildReadOnlyBody(
+    BuildContext context, {
+    required double maxBodyHeight,
+    required double contentWidth,
+  }) {
+    final bodyHeight = _resolveDetailBodyHeight(
+      context,
+      text: _originalBody,
+      placeholder: ' ',
+      maxBodyHeight: maxBodyHeight,
+      contentWidth: contentWidth,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _originalTitle,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: _primaryColor,
-            height: 1.4,
-          ),
-        ),
+        Text(_originalTitle, style: _titleStyle),
         const SizedBox(height: 16),
-        SizedBox(
-          height: detailViewportHeight,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          height: bodyHeight,
           child: Scrollbar(
             controller: _readOnlyBodyScrollController,
             thumbVisibility: _originalBody.trim().isNotEmpty,
@@ -975,15 +1084,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
             child: SingleChildScrollView(
               controller: _readOnlyBodyScrollController,
               padding: const EdgeInsets.only(right: 6),
-              child: Text(
-                _originalBody,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  color: _bodyText,
-                  height: 1.6,
-                ),
-              ),
+              child: Text(_originalBody, style: _bodyStyle),
             ),
           ),
         ),
@@ -1181,6 +1282,25 @@ class _MemoDetailScreenState extends State<MemoDetailScreen>
       ),
     );
   }
+
+  _ActionVisuals _resolveActionVisuals() {
+    if (_isEditing && !_hasChanges && !_isCreatingMode) {
+      return _ActionVisuals(
+        backgroundColor: const Color(0xFFFFF4D6),
+        textColor: _editingColor,
+        borderColor: const Color(0xFFFFE3A3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        borderRadius: 16,
+      );
+    }
+
+    return _ActionVisuals(
+      backgroundColor: _accentColor.withValues(alpha: 0.1),
+      textColor: _accentColorNew,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      borderRadius: 999,
+    );
+  }
 }
 
 class _SavedMemo {
@@ -1193,6 +1313,32 @@ class _SavedMemo {
   final String memoId;
   final String title;
   final String body;
+}
+
+class _DetailViewportConfig {
+  const _DetailViewportConfig({
+    required this.maxBodyHeight,
+    required this.scrollBottomPadding,
+  });
+
+  final double maxBodyHeight;
+  final double scrollBottomPadding;
+}
+
+class _ActionVisuals {
+  const _ActionVisuals({
+    required this.backgroundColor,
+    required this.textColor,
+    required this.padding,
+    required this.borderRadius,
+    this.borderColor,
+  });
+
+  final Color backgroundColor;
+  final Color textColor;
+  final EdgeInsets padding;
+  final double borderRadius;
+  final Color? borderColor;
 }
 
 class _VoiceBars extends StatelessWidget {
