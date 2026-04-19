@@ -700,7 +700,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       onTap: () {
         final task = Task(
           id: event.id,
-          title: _ellipsisTitle(event.title),
+          title: event.title,
           category: event.eventType,
           date: DateTime(
             event.startTime.year,
