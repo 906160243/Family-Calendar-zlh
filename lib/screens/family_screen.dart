@@ -147,7 +147,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
       final familyDoc = await familyRef.get();
 
       if (!familyDoc.exists) {
-        throw Exception('Family does not exist');
+        throw Exception('Group does not exist');
       }
 
       final familyData = familyDoc.data() ?? {};
@@ -223,8 +223,8 @@ class _FamilyScreenState extends State<FamilyScreen> {
     if (_isProcessingAction) return;
 
     final confirmed = await _showConfirmDialog(
-      title: 'Disband family?',
-      message: 'This will remove the family for all members.',
+      title: 'Disband group?',
+      message: 'This will remove the group for all members.',
       confirmText: 'Disband',
       confirmColor: Colors.redAccent,
     );
@@ -289,7 +289,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
 
     final confirmed = await _showConfirmDialog(
       title: 'Remove member?',
-      message: 'Remove $targetName from this family?',
+      message: 'Remove $targetName from this group?',
       confirmText: 'Remove',
       confirmColor: Colors.redAccent,
     );
@@ -350,8 +350,8 @@ class _FamilyScreenState extends State<FamilyScreen> {
     if (uid == null) return;
 
     final confirmed = await _showConfirmDialog(
-      title: 'Leave family?',
-      message: 'You will leave this family.',
+      title: 'Leave group?',
+      message: 'You will leave this group.',
       confirmText: 'Leave',
       confirmColor: Colors.redAccent,
     );
@@ -715,7 +715,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: 'family.member@email.com',
+                        hintText: 'group.member@email.com',
                         hintStyle: TextStyle(
                           fontSize: 16,
                           color: AppTheme.headline.withOpacity(0.4),
@@ -866,7 +866,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Family Group Chat',
+                        'Group Chat',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -913,7 +913,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                 Row(
                   children: [
                     const Text(
-                      'Existing Family',
+                      'Existing Group',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -968,7 +968,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Failed to load family members',
+                      'Failed to load group members',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -997,7 +997,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: const Text(
-                    'No family members found.',
+                    'No group members found.',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
